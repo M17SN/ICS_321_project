@@ -506,6 +506,8 @@ SELECT *
 FROM system_user;
 SELECT *
 FROM player;
+SELECT *
+FROM player_request;
 INSERT INTO PLAYER (player_id, jersey_no, position_to_play)
 VALUES (10, 0, 'NA');
 ALTER TABLE SYSTEM_USER ADD COLUMN kfupm_id INT NULL;
