@@ -282,3 +282,230 @@ FOREIGN KEY (player_gk) REFERENCES PLAYER (player_id),
 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED (match_no));
 INSERT INTO PENALTY_GK VALUES (1, 1214, 1003);
 INSERT INTO PENALTY_GK VALUES (1, 1215, 1007);
+ALTER TABLE MATCH_PLAYED 
+ADD COLUMN tr_id numeric NULL;
+UPDATE MATCH_PLAYED SET tr_id = 1 WHERE match_no IN (1,3,4);  -- Faculty Tournament
+UPDATE MATCH_PLAYED SET tr_id = 2 WHERE match_no = 2;         -- Open Tournament
+ALTER TABLE MATCH_PLAYED 
+MODIFY tr_id numeric NOT NULL,
+ADD FOREIGN KEY (tr_id) REFERENCES TOURNAMENT(tr_id);
+CREATE TABLE SYSTEM_USER (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(20) NOT NULL UNIQUE,
+    password VARCHAR(20) NOT NULL,
+    role CHAR(1) NOT NULL CHECK (role IN ('a', 'g', 'p')) -- a = admin, g = guest, p = player
+);
+ALTER TABLE SYSTEM_USER
+ADD COLUMN email VARCHAR(50) NOT NULL;
+CREATE TABLE PLAYER_REQUEST (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    player_id numeric NOT NULL,
+    team_id numeric NOT NULL,
+    tr_id numeric NOT NULL,
+    request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(10) DEFAULT 'pending',
+    FOREIGN KEY (player_id) REFERENCES PLAYER(player_id),
+    FOREIGN KEY (team_id) REFERENCES TEAM(team_id),
+    FOREIGN KEY (tr_id) REFERENCES TOURNAMENT(tr_id)
+);
+CREATE TABLE EMAIL_NOTIFICATION (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    match_no numeric NOT NULL,
+    team_id numeric NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no),
+    FOREIGN KEY (team_id) REFERENCES TEAM(team_id)
+);
+ALTER TABLE match_played DROP FOREIGN KEY match_played_ibfk_5;
+ALTER TABLE player_request DROP FOREIGN KEY player_request_ibfk_3;
+ALTER TABLE team_player DROP FOREIGN KEY team_player_ibfk_3;
+ALTER TABLE team_support DROP FOREIGN KEY team_support_ibfk_3;
+ALTER TABLE tournament_team DROP FOREIGN KEY tournament_team_ibfk_1;
+ALTER TABLE match_played MODIFY tr_id INT NOT NULL;
+ALTER TABLE player_request MODIFY tr_id INT NOT NULL;
+ALTER TABLE team_player MODIFY tr_id INT NOT NULL;
+ALTER TABLE team_support MODIFY tr_id INT NOT NULL;
+ALTER TABLE tournament_team MODIFY tr_id INT NOT NULL;
+ALTER TABLE tournament DROP PRIMARY KEY;
+ALTER TABLE tournament MODIFY tr_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY;
+ALTER TABLE match_played
+  ADD CONSTRAINT match_played_ibfk_5 FOREIGN KEY (tr_id) REFERENCES tournament(tr_id);
+
+ALTER TABLE player_request
+  ADD CONSTRAINT player_request_ibfk_3 FOREIGN KEY (tr_id) REFERENCES tournament(tr_id);
+
+ALTER TABLE team_player
+  ADD CONSTRAINT team_player_ibfk_3 FOREIGN KEY (tr_id) REFERENCES tournament(tr_id);
+
+ALTER TABLE team_support
+  ADD CONSTRAINT team_support_ibfk_3 FOREIGN KEY (tr_id) REFERENCES tournament(tr_id);
+
+ALTER TABLE tournament_team
+  ADD CONSTRAINT tournament_team_ibfk_1 FOREIGN KEY (tr_id) REFERENCES tournament(tr_id);
+UPDATE TOURNAMENT SET start_date = '2023-03-10', end_date = '2023-03-25' WHERE tr_id = 1;
+UPDATE TOURNAMENT SET start_date = '2023-03-15', end_date = '2023-03-30' WHERE tr_id = 2;
+UPDATE TOURNAMENT SET start_date = '2022-12-01', end_date = '2022-12-09' WHERE tr_id = 3;
+UPDATE TOURNAMENT SET start_date = '2023-02-15', end_date = '2023-02-25' WHERE tr_id = 4;
+UPDATE TOURNAMENT SET start_date = '2023-01-01', end_date = '2023-01-15' WHERE tr_id = 5;
+ALTER TABLE MATCH_PLAYED MODIFY play_stage VARCHAR(30);
+ALTER TABLE MATCH_PLAYED MODIFY results VARCHAR(5) NULL;
+-- 1. Drop the existing foreign key constraint (if it exists)
+ALTER TABLE MATCH_PLAYED DROP FOREIGN KEY match_played_ibfk_4;
+
+-- 2. Alter columns (adjust player_of_match type as needed)
+ALTER TABLE MATCH_PLAYED 
+  MODIFY results VARCHAR(5) NULL,
+  MODIFY decided_by CHAR(1) NULL,
+  MODIFY goal_score VARCHAR(5) NULL,
+  MODIFY audience INT NULL,
+  MODIFY player_of_match decimal(10,0) NULL,
+  MODIFY stop1_sec INT NULL,
+  MODIFY stop2_sec INT NULL;
+
+-- 3. Re-add the foreign key constraint
+ALTER TABLE MATCH_PLAYED
+  ADD CONSTRAINT match_played_ibfk_4
+  FOREIGN KEY (player_of_match) REFERENCES PLAYER(player_id);
+ALTER TABLE email_notification DROP FOREIGN KEY email_notification_ibfk_1;
+ALTER TABLE goal_details DROP FOREIGN KEY goal_details_ibfk_3;
+ALTER TABLE match_captain DROP FOREIGN KEY match_captain_ibfk_3;
+ALTER TABLE match_details DROP FOREIGN KEY match_details_ibfk_3;
+ALTER TABLE match_support DROP FOREIGN KEY match_support_ibfk_1;
+ALTER TABLE penalty_gk DROP FOREIGN KEY penalty_gk_ibfk_3;
+ALTER TABLE penalty_shootout DROP FOREIGN KEY penalty_shootout_ibfk_3;
+ALTER TABLE player_booked DROP FOREIGN KEY player_booked_ibfk_3;
+ALTER TABLE player_in_out DROP FOREIGN KEY player_in_out_ibfk_3;
+ALTER TABLE MATCH_PLAYED DROP PRIMARY KEY;
+ALTER TABLE MATCH_PLAYED
+MODIFY match_no INT AUTO_INCREMENT PRIMARY KEY;
+ALTER TABLE email_notification MODIFY match_no INT;
+ALTER TABLE goal_details MODIFY match_no INT;
+ALTER TABLE match_captain MODIFY match_no INT;
+ALTER TABLE match_details MODIFY match_no INT;
+ALTER TABLE match_support MODIFY match_no INT;
+ALTER TABLE penalty_gk MODIFY match_no INT;
+ALTER TABLE penalty_shootout MODIFY match_no INT;
+ALTER TABLE player_booked MODIFY match_no INT;
+ALTER TABLE player_in_out MODIFY match_no INT;
+ALTER TABLE email_notification
+  ADD CONSTRAINT email_notification_ibfk_1 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE goal_details
+  ADD CONSTRAINT goal_details_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE match_captain
+  ADD CONSTRAINT match_captain_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE match_details
+  ADD CONSTRAINT match_details_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE match_support
+  ADD CONSTRAINT match_support_ibfk_1 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE penalty_gk
+  ADD CONSTRAINT penalty_gk_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE penalty_shootout
+  ADD CONSTRAINT penalty_shootout_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE player_booked
+  ADD CONSTRAINT player_booked_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+
+ALTER TABLE player_in_out
+  ADD CONSTRAINT player_in_out_ibfk_3 FOREIGN KEY (match_no) REFERENCES MATCH_PLAYED(match_no);
+ALTER TABLE email_notification DROP FOREIGN KEY email_notification_ibfk_2;
+ALTER TABLE goal_details DROP FOREIGN KEY goal_details_ibfk_1;
+ALTER TABLE match_captain DROP FOREIGN KEY match_captain_ibfk_1;
+ALTER TABLE match_details DROP FOREIGN KEY match_details_ibfk_1;
+ALTER TABLE match_played DROP FOREIGN KEY match_played_ibfk_1;
+ALTER TABLE match_played DROP FOREIGN KEY match_played_ibfk_2;
+ALTER TABLE penalty_gk DROP FOREIGN KEY penalty_gk_ibfk_1;
+ALTER TABLE penalty_shootout DROP FOREIGN KEY penalty_shootout_ibfk_1;
+ALTER TABLE player_booked DROP FOREIGN KEY player_booked_ibfk_1;
+ALTER TABLE player_in_out DROP FOREIGN KEY player_in_out_ibfk_1;
+ALTER TABLE player_request DROP FOREIGN KEY player_request_ibfk_1;
+ALTER TABLE team_player DROP FOREIGN KEY team_player_ibfk_2;
+ALTER TABLE team_support DROP FOREIGN KEY team_support_ibfk_2;
+ALTER TABLE tournament_team DROP FOREIGN KEY tournament_team_ibfk_2;
+ALTER TABLE player_request DROP FOREIGN KEY player_request_ibfk_2;
+ALTER TABLE player_request MODIFY team_id INT;
+ALTER TABLE email_notification MODIFY team_id INT;
+ALTER TABLE goal_details MODIFY team_id INT;
+ALTER TABLE match_captain MODIFY team_id INT;
+ALTER TABLE match_details MODIFY team_id INT;
+ALTER TABLE match_played MODIFY team_id1 INT;
+ALTER TABLE match_played MODIFY team_id2 INT;
+ALTER TABLE penalty_gk MODIFY team_id INT;
+ALTER TABLE penalty_shootout MODIFY team_id INT;
+ALTER TABLE player_booked MODIFY team_id INT;
+ALTER TABLE player_in_out MODIFY team_id INT;
+ALTER TABLE player_request MODIFY team_id INT;
+ALTER TABLE team_player MODIFY team_id INT;
+ALTER TABLE team_support MODIFY team_id INT;
+ALTER TABLE tournament_team MODIFY team_id INT;
+ALTER TABLE TEAM MODIFY team_id INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE email_notification
+  ADD CONSTRAINT email_notification_ibfk_2 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE goal_details
+  ADD CONSTRAINT goal_details_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE match_captain
+  ADD CONSTRAINT match_captain_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE match_details
+  ADD CONSTRAINT match_details_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE match_played
+  ADD CONSTRAINT match_played_ibfk_1 FOREIGN KEY (team_id1) REFERENCES TEAM(team_id);
+
+ALTER TABLE match_played
+  ADD CONSTRAINT match_played_ibfk_2 FOREIGN KEY (team_id2) REFERENCES TEAM(team_id);
+
+ALTER TABLE penalty_gk
+  ADD CONSTRAINT penalty_gk_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE penalty_shootout
+  ADD CONSTRAINT penalty_shootout_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE player_booked
+  ADD CONSTRAINT player_booked_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE player_in_out
+  ADD CONSTRAINT player_in_out_ibfk_1 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE player_request
+  ADD CONSTRAINT player_request_ibfk_2 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE team_player
+  ADD CONSTRAINT team_player_ibfk_2 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE team_support
+  ADD CONSTRAINT team_support_ibfk_2 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+
+ALTER TABLE tournament_team
+  ADD CONSTRAINT tournament_team_ibfk_2 FOREIGN KEY (team_id) REFERENCES TEAM(team_id);
+SELECT * FROM TOURNAMENT_TEAM WHERE team_id = 1221;
+SELECT * FROM TOURNAMENT WHERE tr_id = 10;
+DESCRIBE  PLAYER;
+ALTER TABLE PLAYER_REQUEST ADD COLUMN username VARCHAR(40) AFTER player_id;
+SELECT email, COUNT(*) as count
+FROM SYSTEM_USER
+GROUP BY email
+HAVING count > 1;
+SELECT * FROM SYSTEM_USER WHERE email = 'guest@gmail.com';
+DELETE FROM SYSTEM_USER WHERE user_id = 1;
+DELETE FROM SYSTEM_USER WHERE user_id = 8;
+DELETE FROM SYSTEM_USER WHERE user_id = 9;
+DELETE FROM SYSTEM_USER WHERE user_id = 5;
+DELETE FROM SYSTEM_USER WHERE user_id = 6;
+ALTER TABLE SYSTEM_USER ADD UNIQUE (email);
+SELECT *
+FROM person;
+SELECT *
+FROM system_user;
+SELECT *
+FROM player;
+INSERT INTO PLAYER (player_id, jersey_no, position_to_play)
+VALUES (10, 0, 'NA');
+ALTER TABLE SYSTEM_USER ADD COLUMN kfupm_id INT NULL;
