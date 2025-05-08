@@ -69,26 +69,30 @@ export default function TournamentMatchesSearch() {
             <tbody>
               {matches.map(match => {
                 let resultText = match.results;
-                if (match.results === 'WIN') resultText = `${match.team1} won`;
+                if (!match.results) resultText = 'Not played yet';
+                else if (match.results === 'WIN') resultText = `${match.team1} won`;
                 else if (match.results === 'LOSS') resultText = `${match.team2} won`;
                 else if (match.results === 'DRAW') resultText = 'Draw';
                 return (
                   <tr key={match.match_no} className="hover:bg-blue-50 transition">
-                    <td className="border px-2 py-1">{match.play_date}</td>
-                    <td className="border px-2 py-1">{match.team1}</td>
-                    <td className="border px-2 py-1">{match.team2}</td>
+                    <td className="border px-2 py-1">{match.play_date || '-'}</td>
+                    <td className="border px-2 py-1">{match.team1 || '-'}</td>
+                    <td className="border px-2 py-1">{match.team2 || '-'}</td>
                     <td className="border px-2 py-1">{resultText}</td>
-                    <td className="border px-2 py-1">{match.goal_score}</td>
-                    <td className="border px-2 py-1">{match.venue_name}</td>
-                    <td className="border px-2 py-1">{match.player_of_match}</td>
-                    <td className="border px-2 py-1">{match.audience}</td>
-                    <td className="border px-2 py-1">{match.stage}</td>
+                    <td className="border px-2 py-1">{match.goal_score || '-'}</td>
+                    <td className="border px-2 py-1">{match.venue_name || '-'}</td>
+                    <td className="border px-2 py-1">{match.player_of_match || '-'}</td>
+                    <td className="border px-2 py-1">{match.audience || '-'}</td>
+                    <td className="border px-2 py-1">{match.stage || '-'}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+      {matches.length === 0 && tournamentName && !loading && (
+        <div className="text-center text-gray-500 mt-4">No matches for this tournament yet.</div>
       )}
     </div>
   );

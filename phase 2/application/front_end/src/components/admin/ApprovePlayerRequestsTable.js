@@ -12,7 +12,7 @@ export default function ApprovePlayerRequestsTable() {
     setError('');
     try {
       const res = await axios.get('http://localhost:4000/admin/player-requests');
-      setRequests(res.data.pending_requests || []);
+      setRequests((res.data.pending_requests || []).filter(r => r.status === 'pending'));
     } catch (err) {
       setError('Failed to fetch requests.');
     } finally {
@@ -32,13 +32,12 @@ export default function ApprovePlayerRequestsTable() {
         tournament_name: request.tournament_name,
       });
       toast.success('Player approved successfully!');
-      setRequests(prev => prev.filter(r => r.request_id !== request.request_id));
+      setRequests(prev => prev.map(r =>
+        r.request_id === request.request_id ? { ...r, status: 'approved' } : r
+      ));
     } catch (err) {
       const backendMsg = err.response?.data?.error || 'Failed to approve player.';
       toast.error(backendMsg);
-      if (err.response?.status === 404) {
-        setRequests(prev => prev.filter(r => r.request_id !== request.request_id));
-      }
     }
   };
 
@@ -52,13 +51,12 @@ export default function ApprovePlayerRequestsTable() {
         },
       });
       toast.success('Player join request rejected.');
-      setRequests(prev => prev.filter(r => r.request_id !== request.request_id));
+      setRequests(prev => prev.map(r =>
+        r.request_id === request.request_id ? { ...r, status: 'rejected' } : r
+      ));
     } catch (err) {
       const backendMsg = err.response?.data?.error || 'Failed to reject player request.';
       toast.error(backendMsg);
-      if (err.response?.status === 404) {
-        setRequests(prev => prev.filter(r => r.request_id !== request.request_id));
-      }
     }
   };
 
@@ -89,18 +87,29 @@ export default function ApprovePlayerRequestsTable() {
                 <td className="border px-2 py-1">{req.tournament_name}</td>
                 <td className="border px-2 py-1">{req.request_date}</td>
                 <td className="border px-2 py-1">
-                  <button
-                    className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition disabled:opacity-60"
-                    onClick={() => handleApprove(req)}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition ml-2 disabled:opacity-60"
-                    onClick={() => handleReject(req)}
-                  >
-                    Reject
-                  </button>
+                  {req.status === 'pending' && (
+                    <>
+                      <button
+                        className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition disabled:opacity-60"
+                        onClick={() => handleApprove(req)}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition ml-2 disabled:opacity-60"
+                        onClick={() => handleReject(req)}
+                      >
+                        Reject
+                      </button>
+                      <span className="ml-2 bg-yellow-200 text-yellow-800 px-2 py-1 rounded font-semibold">Pending</span>
+                    </>
+                  )}
+                  {req.status === 'approved' && (
+                    <span className="bg-green-200 text-green-800 px-2 py-1 rounded font-semibold">Approved</span>
+                  )}
+                  {req.status === 'rejected' && (
+                    <span className="bg-red-200 text-red-800 px-2 py-1 rounded font-semibold">Rejected</span>
+                  )}
                 </td>
               </tr>
             ))}

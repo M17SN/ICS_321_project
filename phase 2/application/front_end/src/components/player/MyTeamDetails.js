@@ -16,7 +16,11 @@ export default function MyTeamDetails() {
         const res = await axios.get(`http://localhost:4000/player/my-team/${encodeURIComponent(user.username)}`);
         setTeam(res.data.team || []);
       } catch (err) {
-        setError('Failed to fetch your team.');
+        if (err.response && err.response.status === 404 && err.response.data?.error === 'Player is not registered with any team.') {
+          setError('You are not registered with any team or tournament.');
+        } else {
+          setError('Failed to fetch your team.');
+        }
       } finally {
         setLoading(false);
       }
@@ -40,7 +44,7 @@ export default function MyTeamDetails() {
           </ul>
         </div>
       ) : (
-        <div>You are not registered with any team.</div>
+        <div>You are not registered with any team or tournament.</div>
       )}
     </div>
   );

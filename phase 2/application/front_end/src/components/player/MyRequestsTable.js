@@ -13,10 +13,14 @@ export default function MyRequestsTable() {
       setLoading(true);
       setError('');
       try {
-        const res = await axios.get(`http://localhost:4000/admin/player-requests?username=${encodeURIComponent(user.username)}`);
-        setRequests(res.data.pending_requests || []);
+        const res = await axios.get(`http://localhost:4000/player/my-requests/${encodeURIComponent(user.username)}`);
+        setRequests(res.data.requests || []);
       } catch (err) {
-        setError('Failed to fetch your requests.');
+        if (err.response && err.response.status === 404) {
+          setRequests([]); // treat as no requests
+        } else {
+          setError('Failed to fetch your requests.');
+        }
       } finally {
         setLoading(false);
       }
@@ -43,14 +47,28 @@ export default function MyRequestsTable() {
             </thead>
             <tbody>
               {requests.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-2">No requests found.</td></tr>
+                <tr><td colSpan={4} className="text-center py-2 text-gray-500">You have not made any join requests yet.</td></tr>
               ) : (
                 requests.map(req => (
                   <tr key={req.request_id} className="hover:bg-blue-50 transition">
                     <td className="border px-2 py-1">{req.team_name}</td>
                     <td className="border px-2 py-1">{req.tournament_name}</td>
                     <td className="border px-2 py-1">{req.request_date}</td>
-                    <td className="border px-2 py-1">{req.status}</td>
+                    <td className="border px-2 py-1">
+                      <span
+                        className={
+                          req.status === 'pending'
+                            ? 'bg-yellow-200 text-yellow-800 px-2 py-1 rounded font-semibold'
+                            : req.status === 'approved'
+                            ? 'bg-green-200 text-green-800 px-2 py-1 rounded font-semibold'
+                            : req.status === 'rejected'
+                            ? 'bg-red-200 text-red-800 px-2 py-1 rounded font-semibold'
+                            : ''
+                        }
+                      >
+                        {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                      </span>
+                    </td>
                   </tr>
                 ))
               )}

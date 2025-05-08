@@ -9,19 +9,20 @@ app.use(cors());
 app.use(express.json());
 
 // to connect to MySQL database
-const db = mysql.createConnection({
+const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
     password: 'Qq100100Qq@%', // My SQL password
     database: 'soccerdb'
 });
 
-db.connect(err => {
-if (err) {
+db.getConnection((err, connection) => {
+  if (err) {
     console.error('Database connection error:', err);
     return;
-}
-console.log('Successfully connected to MySQL database ✅');
+  }
+  console.log('Successfully connected to MySQL database ✅');
+  connection.release();
 });
 
 
@@ -253,9 +254,9 @@ app.post('/admin/approve-player', (req, res) => {
         db.query(checkExactTeamQuery, [player_id, team_id, tr_id], (err, exactResult) => {
           if (err) return res.status(500).json({ error: err });
           if (exactResult.length > 0) {
-            // Player already approved, delete the request
-            const deleteRequestQuery = `DELETE FROM PLAYER_REQUEST WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
-            db.query(deleteRequestQuery, [player_id, team_id, tr_id], (err) => {
+            // Player already approved, just update the request status
+            const updateRequestQuery = `UPDATE PLAYER_REQUEST SET status = 'approved' WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
+            db.query(updateRequestQuery, [player_id, team_id, tr_id], (err) => {
               if (err) return res.status(500).json({ error: err });
               return res.status(400).json({ error: 'Player is already approved for this team in this tournament.' });
             });
@@ -271,9 +272,9 @@ app.post('/admin/approve-player', (req, res) => {
           db.query(checkTournamentQuery, [player_id, tr_id], (err, tournamentResult) => {
             if (err) return res.status(500).json({ error: err });
             if (tournamentResult.length > 0) {
-              // Player already registered with another team, delete the request
-              const deleteRequestQuery = `DELETE FROM PLAYER_REQUEST WHERE player_id = ? AND tr_id = ?`;
-              db.query(deleteRequestQuery, [player_id, tr_id], (err) => {
+              // Player already registered with another team, update request to rejected
+              const updateRequestQuery = `UPDATE PLAYER_REQUEST SET status = 'rejected' WHERE player_id = ? AND tr_id = ?`;
+              db.query(updateRequestQuery, [player_id, tr_id], (err) => {
                 if (err) return res.status(500).json({ error: err });
                 return res.status(400).json({ error: 'Player is already registered with another team in this tournament.' });
               });
@@ -289,56 +290,11 @@ app.post('/admin/approve-player', (req, res) => {
             db.query(insertQuery, [player_id, team_id, tr_id], (err, insertResult) => {
               if (err) return res.status(500).json({ error: err });
 
-              // Fetch the player's Gmail
-              const getEmailQuery = `SELECT email, username FROM SYSTEM_USER WHERE username = ? AND email LIKE '%@gmail.com'`;
-              db.query(getEmailQuery, [player_id], (err, userRows) => {
-                if (!err && userRows.length > 0 && userRows[0].email) {
-                  const playerEmail = userRows[0].email;
-                  const playerUsername = userRows[0].username;
-                  // Find all upcoming matches for this team in this tournament
-                  const matchesQuery = `
-                    SELECT mp.*, t1.team_name as team1_name, t2.team_name as team2_name,
-                           DATE_FORMAT(mp.play_date, '%Y-%m-%d') as formatted_date,
-                           v.venue_name
-                    FROM MATCH_PLAYED mp
-                    JOIN TEAM t1 ON mp.team_id1 = t1.team_id
-                    JOIN TEAM t2 ON mp.team_id2 = t2.team_id
-                    JOIN VENUE v ON mp.venue_id = v.venue_id
-                    WHERE mp.tr_id = ? AND (mp.team_id1 = ? OR mp.team_id2 = ?) AND mp.play_date >= CURDATE() AND (mp.results IS NULL OR mp.results = '')`;
-                  db.query(matchesQuery, [tr_id, team_id, team_id], async (err, matches) => {
-                    if (!err && matches.length > 0) {
-                      for (const match of matches) {
-                        const mailOptions = {
-                          from: 'mihsn7778@gmail.com',
-                          to: playerEmail,
-                          subject: `Match Reminder: ${match.team1_name} vs ${match.team2_name}`,
-                          html: `
-                            <h2>Match Reminder</h2>
-                            <p>Hello ${playerUsername},</p>
-                            <p>This is a reminder for your upcoming match:</p>
-                            <ul>
-                              <li><strong>Teams:</strong> ${match.team1_name} vs ${match.team2_name}</li>
-                              <li><strong>Date:</strong> ${match.formatted_date}</li>
-                              <li><strong>Venue:</strong> ${match.venue_name}</li>
-                            </ul>
-                            <p>Good luck!</p>
-                          `
-                        };
-                        try {
-                          await transporter.sendMail(mailOptions);
-                        } catch (emailErr) {
-                          console.error('Error sending match reminder to new player:', emailErr);
-                        }
-                      }
-                    }
-                  });
-                }
-                // Delete the request from PLAYER_REQUEST
-                const deleteRequestQuery = `DELETE FROM PLAYER_REQUEST WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
-                db.query(deleteRequestQuery, [player_id, team_id, tr_id], (err) => {
-                  if (err) return res.status(500).json({ error: err });
-                  res.status(201).json({ message: 'Player approved and added to team successfully!' });
-                });
+              // Update the request status to approved
+              const updateRequestQuery = `UPDATE PLAYER_REQUEST SET status = 'approved' WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
+              db.query(updateRequestQuery, [player_id, team_id, tr_id], (err) => {
+                if (err) return res.status(500).json({ error: err });
+                res.status(201).json({ message: 'Player approved and added to team successfully!' });
               });
             });
           });
@@ -473,14 +429,14 @@ app.delete('/admin/reject-player', (req, res) => {
         }
         const tr_id = tournamentResult[0].tr_id;
 
-        // Delete the request
-        const deleteRequestQuery = `DELETE FROM PLAYER_REQUEST WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
-        db.query(deleteRequestQuery, [player_id, team_id, tr_id], (err, result) => {
+        // Update the request status to rejected
+        const updateRequestQuery = `UPDATE PLAYER_REQUEST SET status = 'rejected' WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
+        db.query(updateRequestQuery, [player_id, team_id, tr_id], (err, result) => {
           if (err) return res.status(500).json({ error: err });
           if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Request not found.' });
           }
-          res.status(200).json({ message: 'Player join request rejected and deleted.' });
+          res.status(200).json({ message: 'Player join request rejected.' });
         });
       });
     });
@@ -707,7 +663,7 @@ app.get('/player/my-team/:username', (req, res) => {
       return res.status(404).json({ error: 'Player not found. Please register first.' });
     }
 
-    const playerId = userResults[0].user_id;  // or whatever your id field is
+    const playerId = userResults[0].kfupm_id;
 
     // Then continue to find the team...
     const findTeamQuery = `
@@ -798,9 +754,40 @@ app.post('/player/send-request', (req, res) => {
   });
 });
 
-
-
-
+// Player views all their join requests (pending, approved, rejected)
+app.get('/player/my-requests/:username', (req, res) => {
+  const { username } = req.params;
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required.' });
+  }
+  // Get kfupm_id for the player
+  const getKfupmIdQuery = `SELECT kfupm_id FROM SYSTEM_USER WHERE username = ? AND role = 'p'`;
+  db.query(getKfupmIdQuery, [username], (err, userResults) => {
+    if (err) return res.status(500).json({ error: err });
+    if (userResults.length === 0 || !userResults[0].kfupm_id) {
+      return res.status(404).json({ error: 'Player not found.' });
+    }
+    const player_id = userResults[0].kfupm_id;
+    // Fetch all requests for this player
+    const query = `
+      SELECT 
+        pr.request_id,
+        t.team_name,
+        tr.tr_name AS tournament_name,
+        DATE_FORMAT(pr.request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
+        pr.status
+      FROM PLAYER_REQUEST pr
+      JOIN TEAM t ON pr.team_id = t.team_id
+      JOIN TOURNAMENT tr ON pr.tr_id = tr.tr_id
+      WHERE pr.player_id = ?
+      ORDER BY pr.request_date DESC
+    `;
+    db.query(query, [player_id], (err, results) => {
+      if (err) return res.status(500).json({ error: err });
+      res.status(200).json({ requests: results });
+    });
+  });
+});
 
 // ==================Login and Register ================== //
 
