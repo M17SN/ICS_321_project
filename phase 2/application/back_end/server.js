@@ -219,6 +219,44 @@ app.post('/admin/select-captain', (req, res) => {
 });
 
 
+app.get('/admin/player-requests', (req, res) => {
+
+
+
+  const query = `
+    SELECT 
+      pr.request_id,
+      pe.name AS player_name,
+      t.team_name,
+      tr.tr_name AS tournament_name,
+      DATE_FORMAT(pr.request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
+      pr.status
+    FROM PLAYER_REQUEST pr
+    JOIN PLAYER p ON pr.player_id = p.player_id
+    JOIN PERSON pe ON p.player_id = pe.kfupm_id
+    JOIN TEAM t ON pr.team_id = t.team_id
+    JOIN TOURNAMENT tr ON pr.tr_id = tr.tr_id
+    WHERE pr.status = 'pending'
+    ORDER BY pr.request_date ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching player requests:', err);
+      return res.status(500).json({ status: "fail", message: 'Server error.' });
+    }
+
+    res.status(200).json({
+      status: "success",
+      pending_requests: results
+    });
+  });
+
+
+
+
+
+
 // Approve a player to join a team manually (admin)
 app.post('/admin/approve-player', (req, res) => {
   const { player_name, team_name, tournament_name } = req.body;
