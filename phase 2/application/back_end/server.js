@@ -251,8 +251,7 @@ app.get('/admin/player-requests', (req, res) => {
       pending_requests: results
     });
   });
-
-
+});
 
 
 
