@@ -7,6 +7,7 @@ import DeleteTournamentForm from '../components/admin/DeleteTournamentForm';
 import AdminScheduleMatchForm from '../components/admin/AdminScheduleMatchForm';
 import CreateTeamForm from '../components/admin/CreateTeamForm';
 import MatchAttendanceChart from '../components/admin/matchAttandanceChart';
+import { MatchResultEntryForm } from '../components/admin';
 
 export default function AdminPanel() {
   return (
@@ -35,6 +36,10 @@ export default function AdminPanel() {
         <section className="bg-white p-6 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">Schedule a Match</h2>
           <AdminScheduleMatchForm />
+        </section>
+        <section className="bg-white p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">Enter Match Results & Details</h2>
+          <MatchResultEntryForm />
         </section>
         <section className="bg-white p-6 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">Delete Tournament</h2>

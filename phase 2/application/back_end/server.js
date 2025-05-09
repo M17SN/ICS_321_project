@@ -12,7 +12,7 @@ app.use(express.json());
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: '12345', // My SQL password
+    password: 'Qq100100Qq@%', // My SQL password
     database: 'soccerdb'
 });
 
@@ -282,8 +282,8 @@ app.post('/admin/approve-player', (req, res) => {
       }
       const team_id = teamResult[0].team_id;
 
+      // Get tr_id
       const getTournamentIdQuery = `SELECT tr_id FROM TOURNAMENT WHERE LOWER(tr_name) = LOWER(?)`;
-
       db.query(getTournamentIdQuery, [tournament_name], (err, tournamentResult) => {
         if (err) return res.status(500).json({ error: err.message || 'Server error.' });
         if (tournamentResult.length === 0) {
@@ -409,7 +409,7 @@ app.delete('/admin/delete-tournament', (req, res) => {
 });
 
 
-app.get('/admin/:tournament_id/stats', async (req, res) => {
+app.get('/admin/:tournament_id/stats', (req, res) => {
     const tr_id = req.params.tournament_id;
     console.log(tr_id)
 
@@ -568,6 +568,7 @@ app.get('/topscorer', (req, res) => {
         FROM GOAL_DETAILS g
         JOIN PLAYER pl ON g.player_id = pl.player_id
         JOIN PERSON p ON pl.player_id = p.kfupm_id
+        WHERE g.goal_type != 'OG'
         GROUP BY g.player_id
         ORDER BY total_goals DESC
         LIMIT 1
@@ -1495,6 +1496,124 @@ app.get('/tournament-groups-with-teams/:tournament_id', (req, res) => {
   });
 });
 
+// Get unplayed matches for a tournament (with team names)
+app.get('/admin/tournament/:tr_id/unplayed-matches', (req, res) => {
+  const { tr_id } = req.params;
+  const query = `
+    SELECT mp.*, t1.team_name AS team1_name, t2.team_name AS team2_name
+    FROM MATCH_PLAYED mp
+    JOIN TEAM t1 ON mp.team_id1 = t1.team_id
+    JOIN TEAM t2 ON mp.team_id2 = t2.team_id
+    WHERE mp.tr_id = ? AND mp.results IS NULL
+  `;
+  db.query(query, [tr_id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+    res.json(results);
+  });
+});
+
+// Get players for a team
+app.get('/admin/team/:team_id/players', (req, res) => {
+  const { team_id } = req.params;
+  const query = `
+    SELECT p.player_id, pe.name
+    FROM PLAYER p
+    JOIN PERSON pe ON p.player_id = pe.kfupm_id
+    JOIN TEAM_PLAYER tp ON p.player_id = tp.player_id
+    WHERE tp.team_id = ?
+  `;
+  db.query(query, [team_id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+    res.json(results);
+  });
+});
+
+// Enter match details, goals, and bookings
+app.post('/admin/match/:match_no/enter-details', async (req, res) => {
+  const { match_no } = req.params;
+  const {
+    goal_score, decided_by, audience, player_of_match,
+    stop1_sec, stop2_sec, goals, bookings
+  } = req.body;
+
+  // Validate required fields
+  if (
+    !goal_score || !decided_by ||
+    audience == null || !player_of_match || stop1_sec == null || stop2_sec == null
+  ) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  // Validate audience against venue capacity
+  // (venue_id is not updated, so fetch it from the match)
+  const [[match]] = await db.promise().query('SELECT venue_id FROM MATCH_PLAYED WHERE match_no = ?', [match_no]);
+  if (!match) return res.status(400).json({ error: 'Match not found.' });
+  const [venue] = await db.promise().query('SELECT venue_capacity FROM VENUE WHERE venue_id = ?', [match.venue_id]);
+  if (!venue.length) return res.status(400).json({ error: 'Venue not found.' });
+  if (audience < 0 || audience > venue[0].venue_capacity) {
+    return res.status(400).json({ error: 'Audience exceeds venue capacity or is negative.' });
+  }
+
+  // Validate stoppage times
+  if (stop1_sec < 0 || stop1_sec > 2700 || stop2_sec < 0 || stop2_sec > 2700) {
+    return res.status(400).json({ error: 'Stoppage seconds must be between 0 and 2700.' });
+  }
+
+  // Validate and parse goal_score
+  const [score1, score2] = goal_score.split('-').map(Number);
+  if (isNaN(score1) || isNaN(score2) || score1 < 0 || score2 < 0) {
+    return res.status(400).json({ error: 'Invalid goal score format.' });
+  }
+
+  // Determine result
+  let results = '';
+  if (score1 > score2) results = 'WIN';
+  else if (score1 < score2) results = 'LOSS';
+  else results = 'DRAW';
+
+  // Update MATCH_PLAYED (do not update play_date, play_stage, venue_id, tr_id)
+  await db.promise().query(
+    `UPDATE MATCH_PLAYED SET goal_score=?, results=?, decided_by=?, audience=?, player_of_match=?, stop1_sec=?, stop2_sec=? WHERE match_no=?`,
+    [goal_score, results, decided_by, audience, player_of_match, stop1_sec, stop2_sec, match_no]
+  );
+
+  // Insert goals
+  if (Array.isArray(goals)) {
+    for (const goal of goals) {
+      console.log('Inserting goal:', goal);
+      if (!goal.player_id || !goal.team_id || goal.goal_time == null || !goal.goal_type || !goal.goal_half) {
+        return res.status(400).json({ error: 'Invalid goal entry.' });
+      }
+      if ((goal.goal_half == 1 && (goal.goal_time < 0 || goal.goal_time > 45)) ||
+          (goal.goal_half == 2 && (goal.goal_time < 45 || goal.goal_time > 90))) {
+        return res.status(400).json({ error: 'Goal time/half mismatch.' });
+      }
+      await db.promise().query(
+        `INSERT INTO GOAL_DETAILS (match_no, player_id, team_id, goal_time, goal_type, play_stage, goal_schedule, goal_half)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [match_no, goal.player_id, goal.team_id, goal.goal_time, goal.goal_type, match.play_stage, goal.goal_schedule || 'NT', goal.goal_half]
+      );
+    }
+  }
+
+  // Insert bookings
+  if (Array.isArray(bookings)) {
+    for (const booking of bookings) {
+      console.log('Inserting booking:', booking);
+      if (!booking.player_id || !booking.team_id || booking.booking_time == null || !booking.play_half) {
+        return res.status(400).json({ error: 'Invalid booking entry.' });
+      }
+      await db.promise().query(
+        `INSERT INTO PLAYER_BOOKED (match_no, team_id, player_id, booking_time, sent_off, play_schedule, play_half)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [match_no, booking.team_id, booking.player_id, booking.booking_time, booking.sent_off, booking.play_schedule || 'NT', booking.play_half]
+      );
+    }
+  }
+
+  res.json({ message: 'Match details, goals, and bookings saved successfully!' });
+});
+
 // ==================Error Handling Middleware================== //
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -1515,6 +1634,16 @@ app.use((req, res, next) => {
 
 app.listen(4000, () => {
     console.log('Server running on http://localhost:4000');
+});
+
+// Get a team name by team_id
+app.get('/team/:team_id', (req, res) => {
+  const { team_id } = req.params;
+  db.query('SELECT team_name FROM TEAM WHERE team_id = ?', [team_id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+    if (!results.length) return res.status(404).json({ error: 'Team not found.' });
+    res.json({ team_name: results[0].team_name });
+  });
 });
 
 
