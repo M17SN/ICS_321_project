@@ -12,7 +12,7 @@ app.use(express.json());
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: 'Qq100100Qq@%', // My SQL password
+    password: '12345', // My SQL password
     database: 'soccerdb'
 });
 
@@ -371,36 +371,40 @@ app.delete('/admin/delete-tournament', (req, res) => {
   });
 });
 
-// Admin views all pending player join requests
-app.get('/admin/player-requests', (req, res) => {
+
+app.get('/admin/:tournament_id/stats', async (req, res) => {
+    const tr_id = req.params.tournament_id;
+    console.log(tr_id)
+
   const query = `
     SELECT 
-      pr.request_id,
-      pe.name AS player_name,
-      t.team_name,
-      tr.tr_name AS tournament_name,
-      DATE_FORMAT(pr.request_date, '%Y-%m-%d %H:%i:%s') AS request_date,
-      pr.status
-    FROM PLAYER_REQUEST pr
-    JOIN PLAYER p ON pr.player_id = p.player_id
-    JOIN PERSON pe ON p.player_id = pe.kfupm_id
-    JOIN TEAM t ON pr.team_id = t.team_id
-    JOIN TOURNAMENT tr ON pr.tr_id = tr.tr_id
-    WHERE pr.status = 'pending'
-    ORDER BY pr.request_date ASC
+      m.match_no,
+      m.play_date,
+      t1.team_name AS team1,
+      t2.team_name AS team2,
+      m.audience
+    FROM match_played m
+    JOIN team t1 ON m.team_id1 = t1.team_id
+    JOIN team t2 ON m.team_id2 = t2.team_id
+    WHERE m.tr_id = ?
+    ORDER BY m.play_date
   `;
 
-  db.query(query, (err, results) => {
+  db.query(query, [tr_id], (err, results) => {
     if (err) {
-      console.error('Error fetching player requests:', err);
-      return res.status(500).json({ status: "fail", message: 'Server error.' });
+      console.error('Error fetching attendance data:', err);
+      return res.status(500).json({ error: 'Failed to fetch attendance data' });
     }
 
-    res.status(200).json({
-      status: "success",
-      pending_requests: results
-    });
-  });
+    const data = results.map(match => ({
+      matchLabel: `${match.team1} vs ${match.team2}`,
+      play_date: match.play_date,
+      audience: match.audience
+    }));
+
+    console.log(data, 11)
+    res.json(data);
+  });   
 });
 
 // Reject a player join request (admin)
@@ -562,13 +566,41 @@ app.get('/redcards', (req, res) => {
     });
 });
 
+
+app.get('/tournaments/:tournament_id/stats', (req, res) => {
+    const tournamentId = req.params.tournament_id;
+    console.log(tournamentId)
+    const query = `
+    SELECT 
+      t.team_name,
+      tt.won,
+      tt.draw,
+      tt.lost
+    FROM 
+      tournament_team tt
+    JOIN 
+      team t ON tt.team_id = t.team_id
+    WHERE 
+      tt.tr_id = ?
+  `;
+    db.query(query, [tournamentId], (err, results) => {
+        if (err) {
+          console.error('Error fetching team stats:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        console.log(results)
+        res.json(results);
+      });
+});
+
+
 // Browse all members of a selected team including manager, coach, captain and players
 app.get('/team-members/by-name/:team_name', (req, res) => {
     const teamName = req.params.team_name;
   
     // 1. Get team ID first
     const getTeamIdQuery = `
-      SELECT team_id, team_name
+      SELECT team_id, team_name 
       FROM TEAM
       WHERE LOWER(team_name) = LOWER(?)
     `;

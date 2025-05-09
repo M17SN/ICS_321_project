@@ -6,6 +6,7 @@ import ApprovePlayerRequestsTable from '../components/admin/ApprovePlayerRequest
 import DeleteTournamentForm from '../components/admin/DeleteTournamentForm';
 import AdminScheduleMatchForm from '../components/admin/AdminScheduleMatchForm';
 import CreateTeamForm from '../components/admin/CreateTeamForm';
+import MatchAttendanceChart from '../components/admin/matchAttandanceChart';
 
 export default function AdminPanel() {
   return (
@@ -38,6 +39,10 @@ export default function AdminPanel() {
         <section className="bg-white p-6 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">Delete Tournament</h2>
           <DeleteTournamentForm />
+        </section>
+        <section className="bg-white p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">Delete Tournament</h2>
+          <MatchAttendanceChart />
         </section>
       </div>
     </div>
