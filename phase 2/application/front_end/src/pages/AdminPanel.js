@@ -46,7 +46,7 @@ export default function AdminPanel() {
           <DeleteTournamentForm />
         </section>
         <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Delete Tournament</h2>
+          <h2 className="text-xl font-semibold mb-2">Attendance Over Time</h2>
           <MatchAttendanceChart />
         </section>
       </div>

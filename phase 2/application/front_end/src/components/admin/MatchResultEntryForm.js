@@ -40,6 +40,7 @@ export default function MatchResultEntryForm() {
   useEffect(() => {
     axios.get('http://localhost:4000/tournaments').then(res => setTournaments(res.data)).catch(() => setTournaments([]));
     axios.get('http://localhost:4000/admin/venues').then(res => setVenues(res.data)).catch(() => setVenues([]));
+    console.log(1)
   }, []);
 
   // Fetch unplayed matches when tournament selected
@@ -50,6 +51,7 @@ export default function MatchResultEntryForm() {
     } else {
       setMatches([]);
     }
+    console.log(1)
     setSelectedMatch('');
     setMatchDetails(null);
     setTeam1Players([]);
@@ -135,18 +137,25 @@ export default function MatchResultEntryForm() {
 
   // Set team_id automatically for bookings
   useEffect(() => {
-    setForm(f => {
-      const bookings = (f.bookings || []).map(b => {
-        if (b.player_id) {
-          const player = [...team1Players, ...team2Players].find(p => p.player_id.toString() === b.player_id.toString());
-          return { ...b, team_id: player ? (team1Players.some(tp => tp.player_id === player.player_id) ? matchDetails?.team_id1 : matchDetails?.team_id2) : '' };
-        }
-        return b;
-      });
-      return { ...f, bookings };
+  setForm(f => {
+    const bookings = (f.bookings || []).map(b => {
+      if (b.player_id) {
+        const player = [...team1Players, ...team2Players].find(p => p.player_id.toString() === b.player_id.toString());
+        return {
+          ...b,
+          team_id: player
+            ? (team1Players.some(tp => tp.player_id === player.player_id)
+              ? matchDetails?.team_id1
+              : matchDetails?.team_id2)
+            : ''
+        };
+      }
+      return b;
     });
-    // eslint-disable-next-line
-  }, [form.bookings, team1Players, team2Players]);
+    return { ...f, bookings };
+  });
+}, [team1Players, team2Players, matchDetails]);
+
 
   // Handle submit
   const handleSubmit = async e => {

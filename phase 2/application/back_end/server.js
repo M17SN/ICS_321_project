@@ -12,7 +12,7 @@ app.use(express.json());
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: 'Qq100100Qq@%', // My SQL password
+    password: '12345', // My SQL password
     database: 'soccerdb'
 });
 
@@ -868,6 +868,60 @@ app.get('/player/my-requests/:username', (req, res) => {
   });
 });
 
+app.get('/player/:playerId/stats', (req, res) => {
+  const { playerId } = req.params;
+
+  const sql = `
+    SELECT 
+      gp.match_no,
+      DATE(mp.play_date) AS play_date,
+      COUNT(*) AS goals_in_match
+    FROM goal_details gp
+    JOIN match_played mp ON gp.match_no = mp.match_no
+    WHERE gp.player_id = ?
+    GROUP BY gp.match_no, mp.play_date
+    ORDER BY mp.play_date ASC
+  `;
+
+  db.query(sql, [playerId], (err, results) => {
+    if (err) {
+      console.error('Error fetching accumulated goals:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    // Accumulate the goals
+    let totalGoals = 0;
+    const accumulated = results.map(row => {
+      totalGoals += row.goals_in_match;
+      return {
+        match_no: row.match_no,
+        play_date: row.play_date,
+        accumulated_goals: totalGoals
+      };
+    });
+
+    res.json({ data: accumulated });
+  });
+});
+
+
+app.get('/players', (req, res) => {
+  const query = `
+    SELECT p.player_id, pr.name
+    FROM player p
+    JOIN person pr ON p.player_id = pr.kfupm_id
+    ORDER BY pr.name ASC;
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching players:', err);
+      return res.status(500).json({ error: 'Failed to fetch players' });
+    }
+    res.json(results);
+  });
+});
+
 // ==================Login and Register ================== //
 
 // Register
@@ -1368,7 +1422,18 @@ app.get('/admin/venues', (req, res) => {
 // Schedule a new match
 app.post('/admin/schedule-match', async (req, res) => {
   try {
+    const stageMapping = {
+  'Group Stage': 'G',
+  'Round of 16': 'R',
+  'Quarter Finals': 'Q',
+  'Semi Final': 'S',
+  'Final': 'F'
+};
+
     const { tr_id, team_id1, team_id2, play_date, play_stage, venue_id } = req.body;
+
+    
+    
     // 1. Teams must be different
     if (!tr_id || !team_id1 || !team_id2 || !play_date || !play_stage) {
       return res.status(400).json({ error: 'Missing required fields.' });
@@ -1429,7 +1494,7 @@ app.post('/admin/schedule-match', async (req, res) => {
       INSERT INTO MATCH_PLAYED (play_stage, play_date, team_id1, team_id2, results, decided_by, goal_score, venue_id, audience, player_of_match, stop1_sec, stop2_sec, tr_id)
       VALUES (?, ?, ?, ?, NULL, NULL, NULL, ?, NULL, NULL, NULL, NULL, ?)
     `;
-    const [insertResult] = await db.promise().query(insertQuery, [play_stage, play_date, team_id1, team_id2, venue_id || null, tr_id]);
+    const [insertResult] = await db.promise().query(insertQuery, [stageMapping[play_stage], play_date, team_id1, team_id2, venue_id || null, tr_id]);
     // Fetch the new match_no
     const [matchRows] = await db.promise().query('SELECT LAST_INSERT_ID() AS match_no');
     const match_no = matchRows[0].match_no;
@@ -1530,6 +1595,15 @@ app.get('/admin/team/:team_id/players', (req, res) => {
 
 // Enter match details, goals, and bookings
 app.post('/admin/match/:match_no/enter-details', async (req, res) => {
+  const stageMapping = {
+  'Group Stage': 'G',
+  'Round of 16': 'R',
+  'Quarter Finals': 'Q',
+  'Semi Final': 'S',
+  'Final': 'F'
+};
+
+
   const { match_no } = req.params;
   const {
     goal_score, decided_by, audience, player_of_match,
@@ -1546,7 +1620,8 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
 
   // Validate audience against venue capacity
   // (venue_id is not updated, so fetch it from the match)
-  const [[match]] = await db.promise().query('SELECT venue_id FROM MATCH_PLAYED WHERE match_no = ?', [match_no]);
+  const [[match]] = await db.promise().query('SELECT * FROM MATCH_PLAYED WHERE match_no = ?', [match_no]);
+  console.log(match,111111)
   if (!match) return res.status(400).json({ error: 'Match not found.' });
   const [venue] = await db.promise().query('SELECT venue_capacity FROM VENUE WHERE venue_id = ?', [match.venue_id]);
   if (!venue.length) return res.status(400).json({ error: 'Venue not found.' });
@@ -1591,7 +1666,7 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
       await db.promise().query(
         `INSERT INTO GOAL_DETAILS (match_no, player_id, team_id, goal_time, goal_type, play_stage, goal_schedule, goal_half)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [match_no, goal.player_id, goal.team_id, goal.goal_time, goal.goal_type, match.play_stage, goal.goal_schedule || 'NT', goal.goal_half]
+        [match_no, goal.player_id, goal.team_id, goal.goal_time, goal.goal_type, stageMapping[match.play_stage] || match.play_stage, goal.goal_schedule || 'NT', goal.goal_half]
       );
     }
   }

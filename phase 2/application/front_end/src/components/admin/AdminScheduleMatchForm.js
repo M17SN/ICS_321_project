@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 
 const PLAY_STAGES = [
   { value: 'Group Stage', label: 'Group Stage' },
+  { value: 'Round of 16 stage', label: 'Round of 16 stage'},
   { value: 'Quarter Finals', label: 'Quarter Finals (Round of 8)' },
   { value: 'Semi Final', label: 'Semi Final (Round of 4)' },
   { value: 'Final', label: 'Final' },

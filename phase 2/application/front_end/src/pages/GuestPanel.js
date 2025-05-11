@@ -4,6 +4,7 @@ import TopScorerCard from '../components/guest/TopScorerCard';
 import RedCardedPlayersTable from '../components/guest/RedCardedPlayersTable';
 import TeamMembersViewer from '../components/guest/TeamMembersViewer';
 import TournamentTeamStatsChart from '../components/guest/TournamentTeamStatsChart';
+import PlayerAccumulatedGoalsChart from '../components/guest/PlayerAccumulatedGoalsChart'
 
 export default function GuestPanel() {
   return (
@@ -29,6 +30,10 @@ export default function GuestPanel() {
         <section className="bg-white p-6 rounded shadow">
           <h2 className="text-xl font-semibold mb-2">Team stats</h2>
           <TournamentTeamStatsChart />
+        </section>
+        <section className="bg-white p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2">Player Accumulated Goals </h2>
+          <PlayerAccumulatedGoalsChart />
         </section>
       </div>
     </div>
