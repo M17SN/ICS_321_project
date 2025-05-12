@@ -85,7 +85,7 @@ export default function AddTeamToTournamentForm() {
         name="team_name"
         value={form.team_name}
         onChange={handleChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       >
         <option value="">Select Team</option>
@@ -97,7 +97,7 @@ export default function AddTeamToTournamentForm() {
         name="tournament_name"
         value={selectedTournamentId}
         onChange={handleTournamentChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       >
         <option value="">Select Tournament</option>
@@ -112,7 +112,7 @@ export default function AddTeamToTournamentForm() {
             name="team_group"
             value={form.team_group}
             onChange={handleGroupInput}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300 uppercase"
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white uppercase"
             placeholder="Enter group (A, B, C, or D)"
             maxLength={1}
             required
@@ -129,20 +129,20 @@ export default function AddTeamToTournamentForm() {
           <div className="mt-4">
             <table className="min-w-full border text-sm shadow rounded-lg overflow-hidden">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="border px-2 py-1">Group</th>
-                  <th className="border px-2 py-1">Slot 1</th>
-                  <th className="border px-2 py-1">Slot 2</th>
-                  <th className="border px-2 py-1">Slot 3</th>
-                  <th className="border px-2 py-1">Slot 4</th>
+                <tr className="bg-dark-700 text-green-400">
+                  <th className="border border-dark-600 px-2 py-1">Group</th>
+                  <th className="border border-dark-600 px-2 py-1">Slot 1</th>
+                  <th className="border border-dark-600 px-2 py-1">Slot 2</th>
+                  <th className="border border-dark-600 px-2 py-1">Slot 3</th>
+                  <th className="border border-dark-600 px-2 py-1">Slot 4</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-dark-800">
                 {['A','B','C','D'].map(g => (
                   <tr key={g}>
-                    <td className="border px-2 py-1 font-bold">{g}</td>
+                    <td className="border border-dark-600 px-2 py-1 font-bold text-green-400">{g}</td>
                     {[0,1,2,3].map(i => (
-                      <td className="border px-2 py-1" key={i}>{groupMap[g][i] || '-'}</td>
+                      <td className="border border-dark-600 px-2 py-1 text-white" key={i}>{groupMap[g][i] || '-'}</td>
                     ))}
                   </tr>
                 ))}
@@ -153,7 +153,7 @@ export default function AddTeamToTournamentForm() {
       )}
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
         disabled={loading || !isValidGroup || isGroupFull || !form.team_name || !selectedTournamentId}
       >
         {loading ? 'Adding...' : 'Add Team to Tournament'}

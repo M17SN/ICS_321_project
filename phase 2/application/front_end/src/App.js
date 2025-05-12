@@ -21,7 +21,7 @@ function App() {
       <Router>
         <Toaster position="top-center" />
         <Navbar />
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-dark-900">
           <Routes>
             <Route path="/" element={<LoginRegister />} />
             <Route path="/admin" element={<ProtectedRoute role="a"><AdminPanel /></ProtectedRoute>} />

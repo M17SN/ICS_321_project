@@ -12,7 +12,7 @@ app.use(express.json());
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: '12345', // My SQL password
+    password: 'Qq100100Qq@%', // My SQL password
     database: 'soccerdb'
 });
 
@@ -144,11 +144,11 @@ app.post('/admin/add-team-to-tournament', (req, res) => {
 
 // Select a captain for a team
 app.post('/admin/select-captain', (req, res) => {
-  const { team_name, tournament_name, player_name } = req.body;
+  const { team_name, tournament_name, player_name, match_no } = req.body;
 
   // Basic validation
-  if (!team_name || !tournament_name || !player_name) {
-    return res.status(400).json({ error: 'Team name, tournament name, and player name are required.' });
+  if (!team_name || !tournament_name || !player_name || !match_no) {
+    return res.status(400).json({ error: 'Team name, tournament name, player name, and match_no are required.' });
   }
 
   // Step 1: Get team_id
@@ -163,7 +163,6 @@ app.post('/admin/select-captain', (req, res) => {
 
     // Step 2: Get tr_id
     const getTournamentIdQuery = `SELECT tr_id FROM TOURNAMENT WHERE LOWER(tr_name) = LOWER(?)`;
-
     db.query(getTournamentIdQuery, [tournament_name], (err, tournamentResult) => {
       if (err) return res.status(500).json({ error: err.message || 'Server error.' });
       if (tournamentResult.length === 0) {
@@ -173,7 +172,6 @@ app.post('/admin/select-captain', (req, res) => {
 
       // Step 3: Get player_id
       const getPlayerIdQuery = `SELECT kfupm_id FROM PERSON WHERE LOWER(name) = LOWER(?)`;
-
       db.query(getPlayerIdQuery, [player_name], (err, playerResult) => {
         if (err) return res.status(500).json({ error: err.message || 'Server error.' });
         if (playerResult.length === 0) {
@@ -181,36 +179,36 @@ app.post('/admin/select-captain', (req, res) => {
         }
         const player_id = playerResult[0].kfupm_id;
 
-        // Step 4: Validate if player belongs to the team in this tournament
-        const validatePlayerQuery = `
-          SELECT * 
-          FROM TEAM_PLAYER
-          WHERE player_id = ? AND team_id = ? AND tr_id = ?
-        `;
-
+        // Step 4: Validate player is part of the team in the tournament
+        const validatePlayerQuery = `SELECT * FROM TEAM_PLAYER WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
         db.query(validatePlayerQuery, [player_id, team_id, tr_id], (err, validationResult) => {
           if (err) return res.status(500).json({ error: err.message || 'Server error.' });
           if (validationResult.length === 0) {
             return res.status(400).json({ error: 'This player is not part of this team in this tournament.' });
           }
 
-          // Step 5: Insert captain (match_no = 1 by default if you don't have specific match)
-          const insertCaptainQuery = `
-            INSERT INTO MATCH_CAPTAIN (match_no, team_id, player_captain)
-            VALUES (?, ?, ?)
-          `;
-
-          const defaultMatchNo = 1; 
-
-          db.query(insertCaptainQuery, [defaultMatchNo, team_id, player_id], (err, insertResult) => {
-            if (err) {
-              if (err.code === 'ER_DUP_ENTRY') {
-                return res.status(400).json({ error: 'Captain already assigned for this team.' });
-              }
-              return res.status(500).json({ error: err.message || 'Server error.' });
+          // Step 5: Validate match_no exists
+          const checkMatchQuery = `SELECT match_no FROM MATCH_PLAYED WHERE match_no = ? AND (team_id1 = ? OR team_id2 = ?) AND tr_id = ?`;
+          db.query(checkMatchQuery, [match_no, team_id, team_id, tr_id], (err, matchResult) => {
+            if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+            if (matchResult.length === 0) {
+              return res.status(400).json({ error: 'Match not found for this team and tournament.' });
             }
 
-            res.status(201).json({ message: 'Captain assigned successfully!' });
+            // Step 6: Insert captain
+            const insertCaptainQuery = `
+              INSERT INTO MATCH_CAPTAIN (match_no, team_id, player_captain)
+              VALUES (?, ?, ?)
+            `;
+            db.query(insertCaptainQuery, [match_no, team_id, player_id], (err, insertResult) => {
+              if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                  return res.status(400).json({ error: 'Captain already assigned for this team in this match.' });
+                }
+                return res.status(500).json({ error: err.message || 'Server error.' });
+              }
+              res.status(201).json({ message: 'Captain assigned successfully!' });
+            });
           });
         });
       });
@@ -332,11 +330,10 @@ app.post('/admin/approve-player', (req, res) => {
               INSERT INTO TEAM_PLAYER (player_id, team_id, tr_id)
               VALUES (?, ?, ?)
             `;
-
             db.query(insertQuery, [player_id, team_id, tr_id], (err, insertResult) => {
               if (err) return res.status(500).json({ error: err.message || 'Server error.' });
 
-              // Update the request status to approved
+              // Update ALL requests for this player/team/tournament to approved
               const updateRequestQuery = `UPDATE PLAYER_REQUEST SET status = 'approved' WHERE player_id = ? AND team_id = ? AND tr_id = ?`;
               db.query(updateRequestQuery, [player_id, team_id, tr_id], (err) => {
                 if (err) return res.status(500).json({ error: err.message || 'Server error.' });
@@ -371,7 +368,19 @@ app.delete('/admin/delete-tournament', (req, res) => {
 
     const tr_id = tournamentResult[0].tr_id;
 
-    // Step 3: Delete related records in correct order
+    // Step 3: Delete related records
+    const deleteGoalDetailsQuery = `
+      DELETE FROM GOAL_DETAILS 
+      WHERE match_no IN (
+        SELECT match_no FROM MATCH_PLAYED WHERE tr_id = ?
+      )
+    `;
+    const deletePlayerBookedQuery = `
+      DELETE FROM PLAYER_BOOKED 
+      WHERE match_no IN (
+        SELECT match_no FROM MATCH_PLAYED WHERE tr_id = ?
+      )
+    `;
     const deleteTeamPlayerQuery = `DELETE FROM TEAM_PLAYER WHERE tr_id = ?`;
     const deleteTeamSupportQuery = `DELETE FROM TEAM_SUPPORT WHERE tr_id = ?`;
     const deleteTournamentTeamQuery = `DELETE FROM TOURNAMENT_TEAM WHERE tr_id = ?`;
@@ -380,26 +389,41 @@ app.delete('/admin/delete-tournament', (req, res) => {
       WHERE team_id1 IN (SELECT team_id FROM TOURNAMENT_TEAM WHERE tr_id = ?)
       OR team_id2 IN (SELECT team_id FROM TOURNAMENT_TEAM WHERE tr_id = ?)
     `;
+    const deleteMatchCaptainQuery = `
+      DELETE FROM MATCH_CAPTAIN
+      WHERE match_no IN (
+        SELECT match_no FROM MATCH_PLAYED WHERE tr_id = ?
+      )
+    `;
 
     // Execute deletions step-by-step
-    db.query(deleteTeamPlayerQuery, [tr_id], (err) => {
+    db.query(deleteGoalDetailsQuery, [tr_id], (err) => {
       if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-
-      db.query(deleteTeamSupportQuery, [tr_id], (err) => {
+      db.query(deletePlayerBookedQuery, [tr_id], (err) => {
         if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-
-        db.query(deleteMatchesQuery, [tr_id, tr_id], (err) => {
+        db.query(deleteTeamPlayerQuery, [tr_id], (err) => {
           if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-
-          db.query(deleteTournamentTeamQuery, [tr_id], (err) => {
+          db.query(deleteTeamSupportQuery, [tr_id], (err) => {
             if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-
-            // Finally delete tournament itself
-            const deleteTournamentQuery = `DELETE FROM TOURNAMENT WHERE tr_id = ?`;
-            db.query(deleteTournamentQuery, [tr_id], (err) => {
+            db.query(deleteMatchCaptainQuery, [tr_id], (err) => {
               if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-
-              res.status(200).json({ message: 'Tournament and related records deleted successfully!' });
+              db.query(deleteMatchesQuery, [tr_id, tr_id], (err) => {
+                if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+                db.query(deleteTournamentTeamQuery, [tr_id], (err) => {
+                  if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+                  // Delete player requests for this tournament
+                  const deletePlayerRequestQuery = `DELETE FROM PLAYER_REQUEST WHERE tr_id = ?`;
+                  db.query(deletePlayerRequestQuery, [tr_id], (err) => {
+                    if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+                    // Finally delete tournament itself
+                    const deleteTournamentQuery = `DELETE FROM TOURNAMENT WHERE tr_id = ?`;
+                    db.query(deleteTournamentQuery, [tr_id], (err) => {
+                      if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+                      res.status(200).json({ message: 'Tournament and related records deleted successfully!' });
+                    });
+                  });
+                });
+              });
             });
           });
         });
@@ -649,7 +673,7 @@ app.get('/team-members/by-name/:team_name', (req, res) => {
   
       const teamId = teamResults[0].team_id;
   
-      // 2. Prepare the three queries
+      
       const playersQuery = `
         SELECT 
           pl.player_id,
@@ -688,7 +712,7 @@ app.get('/team-members/by-name/:team_name', (req, res) => {
         WHERE ts.team_id = ?
       `;
   
-      // 3. Run queries
+      // 2. Run queries
       db.query(playersQuery, [teamId], (err, players) => {
         if (err) return res.status(500).json({ error: err.message || 'Server error.' });
   
@@ -701,7 +725,7 @@ app.get('/team-members/by-name/:team_name', (req, res) => {
             let finalPlayers = [...players];
             let captain = captainResult.length > 0 ? captainResult[0] : null;
   
-            // 4. If captain not in players list, add him manually
+            // 3. If captain not in players list, add him manually
             if (captain) {
               const isCaptainInPlayers = finalPlayers.some(p => p.player_id == captain.player_id);
               if (!isCaptainInPlayers) {
@@ -709,7 +733,7 @@ app.get('/team-members/by-name/:team_name', (req, res) => {
               }
             }
   
-            // 5. respond
+            // 4. respond
             res.json({
               team_id: teamId,
               team_name: teamResults[0].team_name,
@@ -807,25 +831,37 @@ app.post('/player/send-request', (req, res) => {
                   return res.status(404).json({ error: 'Tournament not found.' });
               }
               const tr_id = tournamentResults[0].tr_id;
-              // Step 4: Check if already requested
-              const checkExistingRequest = `
+              // Step 4: Check if player is already in this tournament
+              const checkExistingTournamentQuery = `
                   SELECT *
-                  FROM PLAYER_REQUEST
-                  WHERE player_id = ? AND team_id = ? AND tr_id = ?
+                  FROM TEAM_PLAYER
+                  WHERE player_id = ? AND tr_id = ?
               `;
-              db.query(checkExistingRequest, [player_id, team_id, tr_id], (err, existingResults) => {
+              db.query(checkExistingTournamentQuery, [player_id, tr_id], (err, tournamentResults) => {
                   if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-                  if (existingResults.length > 0) {
-                      return res.status(400).json({ error: 'You already sent a request to this team.' });
+                  if (tournamentResults.length > 0) {
+                      return res.status(400).json({ error: 'You are already part of this tournament.' });
                   }
-                  // Step 5: Insert the new request (including username)
-                  const insertRequest = `
-                      INSERT INTO PLAYER_REQUEST (player_id, username, team_id, tr_id)
-                      VALUES (?, ?, ?, ?)
+                  // Step 5: Check if already requested
+                  const checkExistingRequest = `
+                      SELECT *
+                      FROM PLAYER_REQUEST
+                      WHERE player_id = ? AND team_id = ? AND tr_id = ?
                   `;
-                  db.query(insertRequest, [player_id, username, team_id, tr_id], (err, insertResult) => {
+                  db.query(checkExistingRequest, [player_id, team_id, tr_id], (err, existingResults) => {
                       if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-                      res.status(201).json({ message: 'Join request sent successfully!' });
+                      if (existingResults.length > 0) {
+                          return res.status(400).json({ error: 'You already sent a request to this team.' });
+                      }
+                      // Step 6: Insert the new request (including username)
+                      const insertRequest = `
+                          INSERT INTO PLAYER_REQUEST (player_id, username, team_id, tr_id)
+                          VALUES (?, ?, ?, ?)
+                      `;
+                      db.query(insertRequest, [player_id, username, team_id, tr_id], (err, insertResult) => {
+                          if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+                          res.status(201).json({ message: 'Join request sent successfully!' });
+                      });
                   });
               });
           });
@@ -927,7 +963,7 @@ app.get('/players', (req, res) => {
 // Register
 app.post('/register', (req, res) => {
   console.log('Register request:', req.body);
-  const { username, password, role, email, kfupm_id, name, date_of_birth, position } = req.body;
+  const { username, password, role, email, kfupm_id, name, date_of_birth, position, jersey_no } = req.body;
 
   // Basic field presence check
   if (!username || !password || !role || !email) {
@@ -960,8 +996,8 @@ app.post('/register', (req, res) => {
 
     if (normalizedRole === 'p') {
       // Validate player fields
-      if (!kfupm_id || !name || !date_of_birth || !position) {
-        return res.status(400).json({ error: 'KFUPM ID, name, date of birth, and position are required for players.' });
+      if (!kfupm_id || !name || !date_of_birth || !position || !jersey_no) {
+        return res.status(400).json({ error: 'KFUPM ID, name, date of birth, position, and jersey number are required for players.' });
       }
       if (!/^[0-9]{4}$/.test(kfupm_id)) {
         return res.status(400).json({ error: 'KFUPM ID must be 4 digits.' });
@@ -972,36 +1008,46 @@ app.post('/register', (req, res) => {
       if (!['GK', 'DF', 'CM', 'ST'].includes(position)) {
         return res.status(400).json({ error: 'Invalid position.' });
       }
-      // Use a transaction for all inserts
-      db.getConnection((err, connection) => {
+      if (isNaN(jersey_no) || +jersey_no < 1 || +jersey_no > 99) {
+        return res.status(400).json({ error: 'Jersey number must be between 1 and 99.' });
+      }
+      // Check for duplicate jersey_no in PLAYER table
+      const checkJerseyQuery = 'SELECT * FROM PLAYER WHERE jersey_no = ?';
+      db.query(checkJerseyQuery, [jersey_no], (err, jerseyResults) => {
         if (err) return res.status(500).json({ error: err.message || 'Server error.' });
-        connection.beginTransaction(err => {
-          if (err) { connection.release(); return res.status(500).json({ error: err.message || 'Server error.' }); }
-          connection.query('SELECT * FROM PERSON WHERE kfupm_id = ?', [kfupm_id], (err, personRows) => {
-            if (err) { connection.rollback(() => connection.release()); return res.status(500).json({ error: err.message || 'Server error.' }); }
-            if (personRows.length > 0) {
-              connection.rollback(() => connection.release());
-              return res.status(400).json({ error: 'KFUPM ID already exists in PERSON.' });
-            }
-            connection.query('INSERT INTO PERSON (kfupm_id, name, date_of_birth) VALUES (?, ?, ?)', [kfupm_id, name, date_of_birth], (err, personResult) => {
+        if (jerseyResults.length > 0) {
+          return res.status(400).json({ error: 'Jersey number already taken by another player.' });
+        }
+        db.getConnection((err, connection) => {
+          if (err) return res.status(500).json({ error: err.message || 'Server error.' });
+          connection.beginTransaction(err => {
+            if (err) { connection.release(); return res.status(500).json({ error: err.message || 'Server error.' }); }
+            connection.query('SELECT * FROM PERSON WHERE kfupm_id = ?', [kfupm_id], (err, personRows) => {
               if (err) { connection.rollback(() => connection.release()); return res.status(500).json({ error: err.message || 'Server error.' }); }
-              connection.query('INSERT INTO PLAYER (player_id, jersey_no, position_to_play) VALUES (?, 0, ?)', [kfupm_id, position], (err, playerResult) => {
+              if (personRows.length > 0) {
+                connection.rollback(() => connection.release());
+                return res.status(400).json({ error: 'KFUPM ID already exists in PERSON.' });
+              }
+              connection.query('INSERT INTO PERSON (kfupm_id, name, date_of_birth) VALUES (?, ?, ?)', [kfupm_id, name, date_of_birth], (err, personResult) => {
                 if (err) { connection.rollback(() => connection.release()); return res.status(500).json({ error: err.message || 'Server error.' }); }
-                connection.query('INSERT INTO SYSTEM_USER (username, password, role, email, kfupm_id) VALUES (?, ?, ?, ?, ?)', [username, password, normalizedRole, email, kfupm_id], (err, userResult) => {
-                  if (err) {
-                    connection.rollback(() => connection.release());
-                    if (err.code === 'ER_DUP_ENTRY') {
-                      return res.status(400).json({ error: 'Username already exists.' });
-                    }
-                    return res.status(500).json({ error: err.message || 'Server error.' });
-                  }
-                  connection.commit(err => {
+                connection.query('INSERT INTO PLAYER (player_id, jersey_no, position_to_play) VALUES (?, ?, ?)', [kfupm_id, jersey_no, position], (err, playerResult) => {
+                  if (err) { connection.rollback(() => connection.release()); return res.status(500).json({ error: err.message || 'Server error.' }); }
+                  connection.query('INSERT INTO SYSTEM_USER (username, password, role, email, kfupm_id) VALUES (?, ?, ?, ?, ?)', [username, password, normalizedRole, email, kfupm_id], (err, userResult) => {
                     if (err) {
                       connection.rollback(() => connection.release());
+                      if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(400).json({ error: 'Username already exists.' });
+                      }
                       return res.status(500).json({ error: err.message || 'Server error.' });
                     }
-                    connection.release();
-                    return res.status(201).json({ message: 'Player registered successfully!' });
+                    connection.commit(err => {
+                      if (err) {
+                        connection.rollback(() => connection.release());
+                        return res.status(500).json({ error: err.message || 'Server error.' });
+                      }
+                      connection.release();
+                      return res.status(201).json({ message: 'Player registered successfully!' });
+                    });
                   });
                 });
               });
@@ -1009,6 +1055,7 @@ app.post('/register', (req, res) => {
           });
         });
       });
+      return;
     } else {
       // Not a player, just insert into SYSTEM_USER with kfupm_id as NULL
       const insertQuery = `
@@ -1100,13 +1147,13 @@ async function updateTeamStats(match_no, team_id, win_lose, goal_score) {
               // Update team statistics
               db.query(
                   `UPDATE TOURNAMENT_TEAM 
-                   SET points = points + ?,
-                       won = won + ?,
-                       draw = draw + ?,
-                       lost = lost + ?,
-                       match_played = match_played + 1,
-                       goal_for = goal_for + ?
-                   WHERE team_id = ? AND tr_id = ?`,
+                  SET points = points + ?,
+                      won = won + ?,
+                      draw = draw + ?,
+                      lost = lost + ?,
+                      match_played = match_played + 1,
+                      goal_for = goal_for + ?
+                  WHERE team_id = ? AND tr_id = ?`,
                   [pointsUpdate, wonUpdate, drawUpdate, lostUpdate, goal_score, team_id, tr_id],
                   (err, result) => {
                       if (err) return reject(err);
@@ -1114,8 +1161,8 @@ async function updateTeamStats(match_no, team_id, win_lose, goal_score) {
                       // Update goal difference
                       db.query(
                           `UPDATE TOURNAMENT_TEAM 
-                           SET goal_diff = goal_for - goal_against
-                           WHERE team_id = ? AND tr_id = ?`,
+                          SET goal_diff = goal_for - goal_against
+                          WHERE team_id = ? AND tr_id = ?`,
                           [team_id, tr_id],
                           (err, result) => {
                               if (err) return reject(err);
@@ -1131,12 +1178,12 @@ async function updateTeamStats(match_no, team_id, win_lose, goal_score) {
 
 // ==================Email Notification System================== //
 
-// Configure email transporter (replace with your email credentials)
+// Configure email transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: 'mihsn7778@gmail.com',
-        pass: 'xbeggpydluejuaze'
+        pass: 'fsjflhgbipjruhie'
     }
 });
 
@@ -1146,8 +1193,8 @@ async function sendMatchReminder(match_no) {
         // Get match details
         const matchQuery = `
             SELECT mp.*, t1.team_name as team1_name, t2.team_name as team2_name,
-                   DATE_FORMAT(mp.play_date, '%Y-%m-%d') as formatted_date,
-                   v.venue_name
+                  DATE_FORMAT(mp.play_date, '%Y-%m-%d') as formatted_date,
+                  v.venue_name
             FROM MATCH_PLAYED mp
             JOIN TEAM t1 ON mp.team_id1 = t1.team_id
             JOIN TEAM t2 ON mp.team_id2 = t2.team_id
@@ -1157,7 +1204,7 @@ async function sendMatchReminder(match_no) {
             if (err) return reject(err);
             if (!matchResults.length) return reject(new Error('Match not found'));
             const match = matchResults[0];
-            // Get team members' emails (only valid Gmail)
+            // Get team members' emails (only Gmail)
             const membersQuery = `
                 SELECT DISTINCT su.email, su.username, t.team_name
                 FROM SYSTEM_USER su
@@ -1233,8 +1280,8 @@ async function updateGroupPositions(tr_id, team_group) {
                     await new Promise((resolve, reject) => {
                         db.query(
                             `UPDATE TOURNAMENT_TEAM
-                             SET group_position = ?
-                             WHERE tr_id = ? AND team_id = ?`,
+                            SET group_position = ?
+                            WHERE tr_id = ? AND team_id = ?`,
                             [i + 1, tr_id, teams[i].team_id],
                             (err, result) => {
                                 if (err) reject(err);
@@ -1251,7 +1298,7 @@ async function updateGroupPositions(tr_id, team_group) {
     });
 }
 
-// Modify the existing updateTeamStats function to include group position updates
+// updateTeamStats function
 const originalUpdateTeamStats = updateTeamStats;
 updateTeamStats = async function(match_no, team_id, win_lose, goal_score) {
     try {
@@ -1498,7 +1545,7 @@ app.post('/admin/schedule-match', async (req, res) => {
     // Fetch the new match_no
     const [matchRows] = await db.promise().query('SELECT LAST_INSERT_ID() AS match_no');
     const match_no = matchRows[0].match_no;
-    // Try to send email reminders (do not block scheduling if it fails)
+    // Try to send email reminders
     try {
       await sendMatchReminder(match_no);
     } catch (emailErr) {
@@ -1619,7 +1666,6 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
   }
 
   // Validate audience against venue capacity
-  // (venue_id is not updated, so fetch it from the match)
   const [[match]] = await db.promise().query('SELECT * FROM MATCH_PLAYED WHERE match_no = ?', [match_no]);
   console.log(match,111111)
   if (!match) return res.status(400).json({ error: 'Match not found.' });
@@ -1646,7 +1692,7 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
   else if (score1 < score2) results = 'LOSS';
   else results = 'DRAW';
 
-  // Update MATCH_PLAYED (do not update play_date, play_stage, venue_id, tr_id)
+  // Update MATCH_PLAYED 
   await db.promise().query(
     `UPDATE MATCH_PLAYED SET goal_score=?, results=?, decided_by=?, audience=?, player_of_match=?, stop1_sec=?, stop2_sec=? WHERE match_no=?`,
     [goal_score, results, decided_by, audience, player_of_match, stop1_sec, stop2_sec, match_no]
@@ -1665,7 +1711,7 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
       }
       await db.promise().query(
         `INSERT INTO GOAL_DETAILS (match_no, player_id, team_id, goal_time, goal_type, play_stage, goal_schedule, goal_half)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [match_no, goal.player_id, goal.team_id, goal.goal_time, goal.goal_type, stageMapping[match.play_stage] || match.play_stage, goal.goal_schedule || 'NT', goal.goal_half]
       );
     }
@@ -1680,7 +1726,7 @@ app.post('/admin/match/:match_no/enter-details', async (req, res) => {
       }
       await db.promise().query(
         `INSERT INTO PLAYER_BOOKED (match_no, team_id, player_id, booking_time, sent_off, play_schedule, play_half)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [match_no, booking.team_id, booking.player_id, booking.booking_time, booking.sent_off, booking.play_schedule || 'NT', booking.play_half]
       );
     }

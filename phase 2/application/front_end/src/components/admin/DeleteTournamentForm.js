@@ -44,7 +44,7 @@ export default function DeleteTournamentForm() {
           name="tournament_name"
           value={tournament_name}
           onChange={e => setTournamentName(e.target.value)}
-          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-blue-300"
+          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         >
           <option value="" disabled>Select Tournament</option>
@@ -54,7 +54,7 @@ export default function DeleteTournamentForm() {
         </select>
         <button
           type="submit"
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
+          className="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-900 transition disabled:opacity-60"
           disabled={loading || !tournament_name}
         >
           {loading ? 'Deleting...' : 'Delete Tournament'}

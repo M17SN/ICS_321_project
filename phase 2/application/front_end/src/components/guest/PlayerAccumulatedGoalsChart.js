@@ -35,7 +35,7 @@ export default function PlayerAccumulatedGoalsChart() {
         <select
           value={playerId}
           onChange={e => setPlayerId(e.target.value)}
-          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-blue-300"
+          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         >
           <option value="" disabled>Select Player</option>
@@ -47,7 +47,7 @@ export default function PlayerAccumulatedGoalsChart() {
         </select>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
           disabled={loading || !playerId}
         >
           {loading ? 'Loading...' : 'Show Accumulated Goals'}

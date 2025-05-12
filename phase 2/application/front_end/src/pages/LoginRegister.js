@@ -19,7 +19,7 @@ const positions = [
 
 export default function LoginRegister() {
   const [tab, setTab] = useState('login');
-  const [form, setForm] = useState({ username: '', password: '', email: '', role: 'player', kfupm_id: '', name: '', date_of_birth: '', position: '' });
+  const [form, setForm] = useState({ username: '', password: '', email: '', role: 'player', kfupm_id: '', name: '', date_of_birth: '', position: '', jersey_no: '' });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -58,6 +58,10 @@ export default function LoginRegister() {
         toast.error('Please select a valid position.');
         return false;
       }
+      if (!form.jersey_no || isNaN(form.jersey_no) || +form.jersey_no < 1 || +form.jersey_no > 99) {
+        toast.error('Jersey number must be between 1 and 99.');
+        return false;
+      }
     }
     return true;
   };
@@ -85,6 +89,7 @@ export default function LoginRegister() {
             name: form.name,
             date_of_birth: form.date_of_birth,
             position: form.position,
+            jersey_no: form.jersey_no,
           } : {})
         });
         toast.success('Registration successful! You can now log in.');
@@ -97,17 +102,17 @@ export default function LoginRegister() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-dark-900">
+      <div className="bg-dark-800 p-8 rounded shadow-md w-full max-w-md">
         <div className="flex mb-6">
           <button
-            className={`flex-1 py-2 font-semibold rounded-l ${tab === 'login' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`flex-1 py-2 font-semibold rounded-l ${tab === 'login' ? 'bg-green-800 text-white' : 'bg-dark-700 text-green-500'}`}
             onClick={() => setTab('login')}
           >
             Login
           </button>
           <button
-            className={`flex-1 py-2 font-semibold rounded-r ${tab === 'register' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`flex-1 py-2 font-semibold rounded-r ${tab === 'register' ? 'bg-green-800 text-white' : 'bg-dark-700 text-green-500'}`}
             onClick={() => setTab('register')}
           >
             Register
@@ -120,7 +125,7 @@ export default function LoginRegister() {
             placeholder="Username"
             value={form.username}
             onChange={handleChange}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           />
           <input
             type="password"
@@ -128,7 +133,7 @@ export default function LoginRegister() {
             placeholder="Password"
             value={form.password}
             onChange={handleChange}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           />
           {tab === 'register' && (
             <>
@@ -138,14 +143,14 @@ export default function LoginRegister() {
                 placeholder="Email (must be Gmail)"
                 value={form.email}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
               />
-              <div className="text-xs text-gray-500 mb-1">Only Gmail addresses are accepted (e.g., example@gmail.com)</div>
+              <div className="text-xs text-green-400 mb-1">Only Gmail addresses are accepted (e.g., example@gmail.com)</div>
               <select
                 name="role"
                 value={form.role}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
               >
                 {roles.map(r => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -159,7 +164,7 @@ export default function LoginRegister() {
                     placeholder="KFUPM ID (4 digits)"
                     value={form.kfupm_id}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
                   />
                   <input
                     type="text"
@@ -167,7 +172,7 @@ export default function LoginRegister() {
                     placeholder="Full Name (letters only)"
                     value={form.name}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
                   />
                   <input
                     type="date"
@@ -175,26 +180,36 @@ export default function LoginRegister() {
                     placeholder="Date of Birth"
                     value={form.date_of_birth}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
                   />
                   <select
                     name="position"
                     value={form.position}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
                   >
                     <option value="">Select Position</option>
                     {positions.map(p => (
                       <option key={p.value} value={p.value}>{p.label}</option>
                     ))}
                   </select>
+                  <input
+                    type="number"
+                    name="jersey_no"
+                    placeholder="Jersey Number (1-99)"
+                    min={1}
+                    max={99}
+                    value={form.jersey_no}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
+                  />
                 </>
               )}
             </>
           )}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+            className="w-full bg-green-800 text-white py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Please wait...' : tab === 'login' ? 'Login' : 'Register'}

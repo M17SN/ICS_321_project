@@ -47,7 +47,7 @@ export default function TournamentTeamStatsChart() {
         <select
           value={tournamentName}
           onChange={e => setTournamentName(e.target.value)}
-          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-blue-300"
+          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         >
           <option value="" disabled>Select Tournament</option>
@@ -57,7 +57,7 @@ export default function TournamentTeamStatsChart() {
         </select>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
           disabled={loading || !tournamentName}
         >
           {loading ? 'Loading...' : 'Show Stats'}
@@ -85,7 +85,7 @@ export default function TournamentTeamStatsChart() {
       )}
 
       {teamStats.length === 0 && tournamentName && !loading && (
-        <div className="text-center text-gray-500 mt-4">No team stats available for this tournament yet.</div>
+        <div className="text-center text-gray-400 mt-4">No team stats available for this tournament yet.</div>
       )}
     </div>
   );

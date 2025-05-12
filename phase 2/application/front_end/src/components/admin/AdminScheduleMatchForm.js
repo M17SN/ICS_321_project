@@ -124,11 +124,11 @@ export default function AdminScheduleMatchForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow space-y-4 max-w-xl mx-auto">
+    <form onSubmit={handleSubmit} className="bg-dark-800 p-6 rounded shadow space-y-4 max-w-xl mx-auto text-white">
       <h2 className="text-xl font-bold mb-2">Schedule a New Match</h2>
       <div>
         <label className="block font-medium mb-1">Tournament</label>
-        <select name="tr_id" value={form.tr_id} onChange={handleChange} className="w-full border rounded px-3 py-2" required>
+        <select name="tr_id" value={form.tr_id} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
           <option value="">Select Tournament</option>
           {tournaments.map(t => (
             <option key={t.tr_id} value={t.tr_id}>{t.tr_name}</option>
@@ -138,7 +138,7 @@ export default function AdminScheduleMatchForm() {
       <div className="flex gap-4">
         <div className="flex-1">
           <label className="block font-medium mb-1">Team 1</label>
-          <select name="team_id1" value={form.team_id1} onChange={handleChange} className="w-full border rounded px-3 py-2" required disabled={!teams.length}>
+          <select name="team_id1" value={form.team_id1} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required disabled={!teams.length}>
             <option value="">Select Team 1</option>
             {teams.map(t => (
               <option key={t.team_id} value={t.team_id}>{t.team_name} (Group {t.team_group})</option>
@@ -147,7 +147,7 @@ export default function AdminScheduleMatchForm() {
         </div>
         <div className="flex-1">
           <label className="block font-medium mb-1">Team 2</label>
-          <select name="team_id2" value={form.team_id2} onChange={handleChange} className="w-full border rounded px-3 py-2" required disabled={!teams.length}>
+          <select name="team_id2" value={form.team_id2} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required disabled={!teams.length}>
             <option value="">Select Team 2</option>
             {teams.filter(t => t.team_id.toString() !== form.team_id1).map(t => (
               <option key={t.team_id} value={t.team_id}>{t.team_name} (Group {t.team_group})</option>
@@ -162,7 +162,7 @@ export default function AdminScheduleMatchForm() {
           name="play_date"
           value={form.play_date}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700"
           min={dateRange.start}
           max={dateRange.end}
           required
@@ -177,7 +177,7 @@ export default function AdminScheduleMatchForm() {
       </div>
       <div>
         <label className="block font-medium mb-1">Play Stage</label>
-        <select name="play_stage" value={form.play_stage} onChange={handleChange} className="w-full border rounded px-3 py-2" required>
+        <select name="play_stage" value={form.play_stage} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
           <option value="">Select Stage</option>
           {PLAY_STAGES.map(s => (
             <option key={s.value} value={s.value}>{s.label}</option>
@@ -186,7 +186,7 @@ export default function AdminScheduleMatchForm() {
       </div>
       <div>
         <label className="block font-medium mb-1">Venue (optional)</label>
-        <select name="venue_id" value={form.venue_id} onChange={handleChange} className="w-full border rounded px-3 py-2">
+        <select name="venue_id" value={form.venue_id} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
           <option value="">Select Venue (or leave blank for TBD)</option>
           {venues.map(v => (
             <option key={v.venue_id} value={v.venue_id}>{v.venue_name} (Capacity: {v.venue_capacity})</option>
@@ -197,7 +197,7 @@ export default function AdminScheduleMatchForm() {
       {groupStageError && <div className="text-red-600 font-medium">{groupStageError}</div>}
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
         disabled={loading}
       >
         {loading ? 'Scheduling...' : 'Schedule Match'}

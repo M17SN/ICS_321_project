@@ -29,12 +29,12 @@ export default function TeamMembersViewer() {
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow space-y-4">
+    <div className="bg-dark-800 p-6 rounded shadow space-y-4">
       <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-4 items-center">
         <select
           value={teamName}
           onChange={e => setTeamName(e.target.value)}
-          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-blue-300"
+          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         >
           <option value="" disabled>Select Team</option>
@@ -44,7 +44,7 @@ export default function TeamMembersViewer() {
         </select>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
           disabled={loading || !teamName}
         >
           {loading ? 'Searching...' : 'Search'}
@@ -57,20 +57,20 @@ export default function TeamMembersViewer() {
             <div className="font-semibold mb-1">Players:</div>
             <div className="overflow-x-auto">
               {data.players.length === 0 ? (
-                <div className="text-center text-gray-500 py-2">This team doesn't contain any members.</div>
+                <div className="text-center text-gray-400 py-2">This team doesn't contain any members.</div>
               ) : (
                 <table className="min-w-full border text-sm shadow rounded-lg overflow-hidden mb-2">
                   <thead>
-                    <tr className="bg-gray-100">
+                    <tr className="bg-dark-700 text-green-400">
                       <th className="border px-2 py-1">Name</th>
                       <th className="border px-2 py-1">Position</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.players.map((p, i) => (
-                      <tr key={i} className="hover:bg-blue-50 transition">
-                        <td className="border px-2 py-1">{p.name}</td>
-                        <td className="border px-2 py-1">{p.position_to_play}</td>
+                      <tr key={i} className="hover:bg-dark-800 transition">
+                        <td className="border px-2 py-1 text-white">{p.name}</td>
+                        <td className="border px-2 py-1 text-white">{p.position_to_play}</td>
                       </tr>
                     ))}
                   </tbody>

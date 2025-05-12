@@ -5,8 +5,40 @@ import toast from 'react-hot-toast';
 const goalTypes = [
   { value: 'N', label: 'Normal' },
   { value: 'P', label: 'Penalty' },
-  { value: 'OG', label: 'Own Goal' },
-  { value: 'FK', label: 'Free Kick' },
+  { value: 'O', label: 'Own Goal' },
+  { value: 'F', label: 'Free Kick' },
+  { value: 'H', label: 'Header' },
+  { value: 'S', label: 'Shootout' },
+];
+
+// Add new options for halves
+const halfOptions = [
+  { value: 1, label: '1st Half', min: 0, max: 45 },
+  { value: 2, label: '2nd Half', min: 46, max: 90 },
+  { value: 3, label: 'ET 1', min: 91, max: 105 },
+  { value: 4, label: 'ET 2', min: 106, max: 120 },
+];
+
+// Add playStage options for mapping
+const playStages = [
+  { value: 'G', label: 'Group' },
+  { value: 'R', label: 'Round of 16' },
+  { value: 'Q', label: 'Quarter Final' },
+  { value: 'S', label: 'Semi Final' },
+  { value: 'F', label: 'Final' },
+];
+
+// Add goalSchedule options for mapping (if needed)
+const goalSchedules = [
+  { value: 'NT', label: 'Normal Time' },
+  { value: 'ET', label: 'Extra Time' },
+  { value: 'P', label: 'Penalties' },
+];
+
+// Sent off options for bookings
+const sentOffOptions = [
+  { value: 'N', label: 'No (sent off)' },
+  { value: 'Y', label: 'Yes (sent off)' },
 ];
 
 export default function MatchResultEntryForm() {
@@ -35,6 +67,8 @@ export default function MatchResultEntryForm() {
   });
   const [venues, setVenues] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [penaltyScores, setPenaltyScores] = useState({ team1: '', team2: '' });
+  const [penaltyScorers, setPenaltyScorers] = useState({ team1: [], team2: [] });
 
   // Fetch tournaments
   useEffect(() => {
@@ -79,7 +113,12 @@ export default function MatchResultEntryForm() {
 
   // Handle form changes
   const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (name === 'decided_by' && value !== 'P') {
+      setPenaltyScores({ team1: '', team2: '' });
+      setPenaltyScorers({ team1: [], team2: [] });
+    }
   };
 
   // Handle score change and update goals array
@@ -120,7 +159,7 @@ export default function MatchResultEntryForm() {
     setForm(f => {
       const bookings = [];
       for (let i = 0; i < count; i++) {
-        bookings.push({ idx: i, player_id: '', team_id: '', booking_time: '', play_half: 1, sent_off: 'Y' });
+        bookings.push({ idx: i, player_id: '', team_id: '', booking_time: '', play_half: 1 });
       }
       return { ...f, redCardCount: count, bookings };
     });
@@ -130,6 +169,15 @@ export default function MatchResultEntryForm() {
       const bookings = [...(f.bookings || [])];
       if (bookings[idx]) {
         bookings[idx] = { ...bookings[idx], [field]: value };
+        // Set team_id when player_id is selected
+        if (field === 'player_id') {
+          const player = [...team1Players, ...team2Players].find(p => p.player_id.toString() === value.toString());
+          bookings[idx].team_id = player
+            ? (team1Players.some(tp => tp.player_id === player.player_id)
+              ? matchDetails?.team_id1
+              : matchDetails?.team_id2)
+            : '';
+        }
       }
       return { ...f, bookings };
     });
@@ -156,6 +204,24 @@ export default function MatchResultEntryForm() {
   });
 }, [team1Players, team2Players, matchDetails]);
 
+  // Penalty score change handler
+  const handlePenaltyScoreChange = (team, value) => {
+    const num = value.replace(/\D/g, '');
+    setPenaltyScores(ps => ({ ...ps, [team]: num }));
+    setPenaltyScorers(psc => ({ ...psc, [team]: Array(parseInt(num || 0)).fill('') }));
+  };
+
+  // Penalty scorer change handler
+  const handlePenaltyScorerChange = (team, idx, value) => {
+    setPenaltyScorers(psc => {
+      const arr = [...psc[team]];
+      arr[idx] = value;
+      return { ...psc, [team]: arr };
+    });
+  };
+
+  // Helper to check if group stage
+  const isGroupStage = form.play_stage === 'G' || matchDetails?.play_stage === 'G';
 
   // Handle submit
   const handleSubmit = async e => {
@@ -180,6 +246,42 @@ export default function MatchResultEntryForm() {
       toast.error('Number of red card entries must match the number specified.');
       setSubmitting(false);
       return;
+    }
+    // Validate penalty shootout
+    if (form.decided_by === 'P') {
+      if (form.goal_score1 !== form.goal_score2) {
+        toast.error('For penalty shootout, the main score must be a draw.');
+        setSubmitting(false);
+        return;
+      }
+      if (!penaltyScores.team1 || !penaltyScores.team2) {
+        toast.error('Enter both penalty scores.');
+        setSubmitting(false);
+        return;
+      }
+      if (penaltyScorers.team1.length !== parseInt(penaltyScores.team1) || penaltyScorers.team2.length !== parseInt(penaltyScores.team2)) {
+        toast.error('Select a scorer for each penalty.');
+        setSubmitting(false);
+        return;
+      }
+    }
+    // Red card/goal logic: no goals after red card
+    const redCardTimes = {};
+    if (form.hasRedCard) {
+      for (const b of form.bookings) {
+        if (b.player_id) {
+          if (!redCardTimes[b.player_id] || b.booking_time < redCardTimes[b.player_id]) {
+            redCardTimes[b.player_id] = b.booking_time;
+          }
+        }
+      }
+    }
+    for (const g of form.goals) {
+      if (redCardTimes[g.player_id] !== undefined && parseInt(g.goal_time) > parseInt(redCardTimes[g.player_id])) {
+        toast.error('A player cannot score after being sent off.');
+        setSubmitting(false);
+        return;
+      }
     }
     // Compose goal_score string
     const goal_score = `${form.goal_score1 || 0}-${form.goal_score2 || 0}`;
@@ -208,7 +310,48 @@ export default function MatchResultEntryForm() {
         sent_off: 'Y',
         play_half: parseInt(b.play_half),
       })) : [],
+      penalty_shootout: form.decided_by === 'P' ? {
+        team1: parseInt(penaltyScores.team1),
+        team2: parseInt(penaltyScores.team2),
+        scorers1: penaltyScorers.team1,
+        scorers2: penaltyScorers.team2,
+      } : undefined,
     };
+    // Add validation in handleSubmit for goal_time and booking_time based on selected half
+    for (const g of form.goals) {
+      const opt = halfOptions.find(h => h.value === Number(g.goal_half));
+      if (!opt) {
+        toast.error('Invalid half selected for a goal.');
+        setSubmitting(false);
+        return;
+      }
+      if (g.goal_time < opt.min || g.goal_time > opt.max) {
+        toast.error(`Goal time for ${opt.label} must be between ${opt.min} and ${opt.max}.`);
+        setSubmitting(false);
+        return;
+      }
+    }
+    if (form.hasRedCard) {
+      for (const b of form.bookings) {
+        const opt = halfOptions.find(h => h.value === Number(b.play_half));
+        if (!opt) {
+          toast.error('Invalid half selected for a booking.');
+          setSubmitting(false);
+          return;
+        }
+        if (b.booking_time < opt.min || b.booking_time > opt.max) {
+          toast.error(`Booking time for ${opt.label} must be between ${opt.min} and ${opt.max}.`);
+          setSubmitting(false);
+          return;
+        }
+      }
+    }
+    // Prevent submission if Penalty or Extra Time is selected for group stage
+    if (isGroupStage && (form.decided_by === 'P' || form.decided_by === 'E')) {
+      toast.error('Penalty and Extra Time are not allowed in group stage.');
+      setSubmitting(false);
+      return;
+    }
     try {
       await axios.post(`http://localhost:4000/admin/match/${selectedMatch}/enter-details`, payload);
       toast.success('Match details saved!');
@@ -223,11 +366,11 @@ export default function MatchResultEntryForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow max-w-2xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-4 bg-dark-800 p-6 rounded shadow max-w-2xl mx-auto text-white">
       <h2 className="text-xl font-bold mb-2">Enter Match Result & Details</h2>
       <div>
         <label className="block font-medium mb-1">Tournament</label>
-        <select value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} className="w-full border rounded px-3 py-2" required>
+        <select value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
           <option value="">Select Tournament</option>
           {tournaments.map(t => (
             <option key={t.tr_id} value={t.tr_id}>{t.tr_name}</option>
@@ -237,7 +380,7 @@ export default function MatchResultEntryForm() {
       {selectedTournament && (
         <div>
           <label className="block font-medium mb-1">Unplayed Match</label>
-          <select value={selectedMatch} onChange={e => setSelectedMatch(e.target.value)} className="w-full border rounded px-3 py-2" required>
+          <select value={selectedMatch} onChange={e => setSelectedMatch(e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
             <option value="">Select Match</option>
             {matches.map(m => {
               const date = m.play_date ? m.play_date.split('T')[0] : '';
@@ -255,45 +398,45 @@ export default function MatchResultEntryForm() {
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Play Date</label>
-              <input type="text" value={form.play_date ? form.play_date.split('T')[0] : ''} disabled className="w-full border rounded px-3 py-2 bg-gray-100" readOnly />
+              <input type="text" value={form.play_date ? form.play_date.split('T')[0] : ''} disabled className="w-full border rounded px-3 py-2 bg-dark-700 text-white" readOnly />
             </div>
             <div className="flex-1">
               <label className="block font-medium mb-1">Play Stage</label>
-              <input type="text" value={form.play_stage} disabled className="w-full border rounded px-3 py-2 bg-gray-100" readOnly />
+              <input type="text" value={form.play_stage} disabled className="w-full border rounded px-3 py-2 bg-dark-700 text-white" readOnly />
             </div>
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Venue</label>
-              <input type="text" value={venues.find(v => v.venue_id === form.venue_id)?.venue_name + (venues.find(v => v.venue_id === form.venue_id) ? ` (Capacity: ${venues.find(v => v.venue_id === form.venue_id).venue_capacity})` : '') || ''} disabled className="w-full border rounded px-3 py-2 bg-gray-100" readOnly />
+              <input type="text" value={venues.find(v => v.venue_id === form.venue_id)?.venue_name + (venues.find(v => v.venue_id === form.venue_id) ? ` (Capacity: ${venues.find(v => v.venue_id === form.venue_id).venue_capacity})` : '') || ''} disabled className="w-full border rounded px-3 py-2 bg-dark-700 text-white" readOnly />
             </div>
             <div className="flex-1">
               <label className="block font-medium mb-1">Audience</label>
-              <input type="number" name="audience" value={form.audience} onChange={handleChange} className="w-full border rounded px-3 py-2" min={0} required />
+              <input type="number" name="audience" value={form.audience} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" min={0} required />
             </div>
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Stoppage 1st Half (sec)</label>
-              <input type="number" name="stop1_sec" value={form.stop1_sec} onChange={handleChange} className="w-full border rounded px-3 py-2" min={0} max={2700} required />
+              <input type="number" name="stop1_sec" value={form.stop1_sec} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" min={0} max={2700} required />
             </div>
             <div className="flex-1">
               <label className="block font-medium mb-1">Stoppage 2nd Half (sec)</label>
-              <input type="number" name="stop2_sec" value={form.stop2_sec} onChange={handleChange} className="w-full border rounded px-3 py-2" min={0} max={2700} required />
+              <input type="number" name="stop2_sec" value={form.stop2_sec} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" min={0} max={2700} required />
             </div>
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Decided By</label>
-              <select name="decided_by" value={form.decided_by} onChange={handleChange} className="w-full border rounded px-3 py-2" required>
+              <select name="decided_by" value={form.decided_by} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
                 <option value="N">Normal</option>
-                <option value="P">Penalty</option>
-                <option value="E">Extra Time</option>
+                <option value="P" disabled={isGroupStage}>Penalty</option>
+                <option value="E" disabled={isGroupStage}>Extra Time</option>
               </select>
             </div>
             <div className="flex-1">
               <label className="block font-medium mb-1">Player of the Match</label>
-              <select name="player_of_match" value={form.player_of_match} onChange={handleChange} className="w-full border rounded px-3 py-2" required>
+              <select name="player_of_match" value={form.player_of_match} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required>
                 <option value="">Select Player</option>
                 {[...team1Players, ...team2Players].map(p => (
                   <option key={p.player_id} value={p.player_id}>{p.name} (ID: {p.player_id})</option>
@@ -304,11 +447,11 @@ export default function MatchResultEntryForm() {
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block font-medium mb-1">Team 1 ({matchDetails?.team1_name || 'Team 1'}) Score</label>
-              <input type="number" min={0} name="goal_score1" value={form.goal_score1} onChange={e => handleScoreChange(1, e.target.value)} className="w-full border rounded px-3 py-2" required />
+              <input type="number" min={0} name="goal_score1" value={form.goal_score1} onChange={e => handleScoreChange(1, e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required />
             </div>
             <div className="flex-1">
               <label className="block font-medium mb-1">Team 2 ({matchDetails?.team2_name || 'Team 2'}) Score</label>
-              <input type="number" min={0} name="goal_score2" value={form.goal_score2} onChange={e => handleScoreChange(2, e.target.value)} className="w-full border rounded px-3 py-2" required />
+              <input type="number" min={0} name="goal_score2" value={form.goal_score2} onChange={e => handleScoreChange(2, e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required />
             </div>
           </div>
           {/* Goals Entry */}
@@ -327,7 +470,7 @@ export default function MatchResultEntryForm() {
                 return (
                   <div key={idx} className="flex gap-2 mb-2 items-center">
                     <span className="text-sm">Goal #{idx + 1}</span>
-                    <select value={goal.player_id || ''} onChange={e => handleGoalDetail(team, idx, 'player_id', e.target.value)} className="border rounded px-2 py-1">
+                    <select value={goal.player_id || ''} onChange={e => handleGoalDetail(team, idx, 'player_id', e.target.value)} className="border rounded px-2 py-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
                       <option value="">Player</option>
                       {allPlayers.map(p => (
                         <option key={p.player_id} value={p.player_id}>{p.name} ({p.player_id})</option>
@@ -335,21 +478,28 @@ export default function MatchResultEntryForm() {
                     </select>
                     <input
                       type="number"
-                      min={Number(goal.goal_half) === 2 ? 45 : 0}
-                      max={Number(goal.goal_half) === 2 ? 90 : 45}
+                      min={(() => {
+                        const opt = halfOptions.find(h => h.value === Number(goal.goal_half));
+                        return opt ? opt.min : 0;
+                      })()}
+                      max={(() => {
+                        const opt = halfOptions.find(h => h.value === Number(goal.goal_half));
+                        return opt ? opt.max : 45;
+                      })()}
                       value={goal.goal_time || ''}
                       onChange={e => handleGoalDetail(team, idx, 'goal_time', e.target.value)}
-                      className="border rounded px-2 py-1 w-20"
+                      className="border rounded px-2 py-1 w-20 bg-dark-700 text-white focus:ring-2 focus:ring-green-700"
                       placeholder="Time"
                     />
-                    <select value={isOwnGoal ? 'OG' : (goal.goal_type || 'N')} onChange={e => handleGoalDetail(team, idx, 'goal_type', e.target.value)} className="border rounded px-2 py-1" disabled={isOwnGoal}>
+                    <select value={isOwnGoal ? 'O' : (goal.goal_type || 'N')} onChange={e => handleGoalDetail(team, idx, 'goal_type', e.target.value)} className="border rounded px-2 py-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" disabled={isOwnGoal}>
                       {goalTypes.map(gt => (
                         <option key={gt.value} value={gt.value}>{gt.label}</option>
                       ))}
                     </select>
-                    <select value={goal.goal_half || 1} onChange={e => handleGoalDetail(team, idx, 'goal_half', e.target.value)} className="border rounded px-2 py-1">
-                      <option value={1}>1st Half</option>
-                      <option value={2}>2nd Half</option>
+                    <select value={goal.goal_half || 1} onChange={e => handleGoalDetail(team, idx, 'goal_half', e.target.value)} className="border rounded px-2 py-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
+                      {halfOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                     {isOwnGoal && <span className="text-xs text-red-600">Own Goal</span>}
                   </div>
@@ -364,31 +514,59 @@ export default function MatchResultEntryForm() {
             {form.hasRedCard && (
               <div className="mt-2">
                 <label>Number of Red Cards:</label>
-                <input type="number" min={0} value={form.redCardCount} onChange={handleRedCardCount} className="border rounded px-2 py-1 ml-2 w-20" />
+                <input type="number" min={0} value={form.redCardCount} onChange={handleRedCardCount} className="border rounded px-2 py-1 ml-2 w-20 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" />
                 {form.redCardCount > 0 && Array.from({ length: form.redCardCount }).map((_, idx) => {
                   const booking = form.bookings[idx] || {};
                   return (
                     <div key={idx} className="flex gap-2 mb-2 items-center mt-2">
                       <span className="text-sm">Red Card #{idx + 1}</span>
-                      <select value={booking.player_id || ''} onChange={e => handleBookingDetail(idx, 'player_id', e.target.value)} className="border rounded px-2 py-1">
+                      <select value={booking.player_id || ''} onChange={e => handleBookingDetail(idx, 'player_id', e.target.value)} className="border rounded px-2 py-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
                         <option value="">Player</option>
                         {[...team1Players, ...team2Players].map(p => (
                           <option key={p.player_id} value={p.player_id}>{p.name}</option>
                         ))}
                       </select>
-                      <input type="number" min={0} max={90} value={booking.booking_time || ''} onChange={e => handleBookingDetail(idx, 'booking_time', e.target.value)} className="border rounded px-2 py-1 w-20" placeholder="Time" />
-                      <select value={booking.play_half || 1} onChange={e => handleBookingDetail(idx, 'play_half', e.target.value)} className="border rounded px-2 py-1">
-                        <option value={1}>1st Half</option>
-                        <option value={2}>2nd Half</option>
+                      <input type="number" min={0} max={90} value={booking.booking_time || ''} onChange={e => handleBookingDetail(idx, 'booking_time', e.target.value)} className="border rounded px-2 py-1 w-20 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" placeholder="Time" />
+                      <select value={booking.play_half || 1} onChange={e => handleBookingDetail(idx, 'play_half', e.target.value)} className="border rounded px-2 py-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
+                        {halfOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
                       </select>
-                      <span className="text-xs text-red-600">Sent Off</span>
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60 mt-4" disabled={submitting}>
+          {form.decided_by === 'P' && (
+            <div className="flex gap-4 mt-4">
+              <div className="flex-1">
+                <label className="block font-medium mb-1">Team 1 Penalties</label>
+                <input type="number" min={0} value={penaltyScores.team1} onChange={e => handlePenaltyScoreChange('team1', e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required />
+                {Array.from({ length: parseInt(penaltyScores.team1 || 0) }).map((_, idx) => (
+                  <select key={idx} value={penaltyScorers.team1[idx] || ''} onChange={e => handlePenaltyScorerChange('team1', idx, e.target.value)} className="w-full border rounded px-2 py-1 mt-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
+                    <option value="">Select Scorer</option>
+                    {team1Players.map(p => (
+                      <option key={p.player_id} value={p.player_id}>{p.name} ({p.player_id})</option>
+                    ))}
+                  </select>
+                ))}
+              </div>
+              <div className="flex-1">
+                <label className="block font-medium mb-1">Team 2 Penalties</label>
+                <input type="number" min={0} value={penaltyScores.team2} onChange={e => handlePenaltyScoreChange('team2', e.target.value)} className="w-full border rounded px-3 py-2 bg-dark-700 text-white focus:ring-2 focus:ring-green-700" required />
+                {Array.from({ length: parseInt(penaltyScores.team2 || 0) }).map((_, idx) => (
+                  <select key={idx} value={penaltyScorers.team2[idx] || ''} onChange={e => handlePenaltyScorerChange('team2', idx, e.target.value)} className="w-full border rounded px-2 py-1 mt-1 bg-dark-700 text-white focus:ring-2 focus:ring-green-700">
+                    <option value="">Select Scorer</option>
+                    {team2Players.map(p => (
+                      <option key={p.player_id} value={p.player_id}>{p.name} ({p.player_id})</option>
+                    ))}
+                  </select>
+                ))}
+              </div>
+            </div>
+          )}
+          <button type="submit" className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60" disabled={submitting}>
             {submitting ? 'Saving...' : 'Save Match Details'}
           </button>
         </>

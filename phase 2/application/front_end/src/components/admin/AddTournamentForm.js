@@ -32,36 +32,36 @@ export default function AddTournamentForm() {
         placeholder="Tournament Name"
         value={form.tr_name}
         onChange={handleChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       />
       <div>
-        <label className="block mb-1 font-medium">Start Date</label>
+        <label className="block mb-1 font-medium text-green-400">Start Date</label>
         <input
           type="date"
           name="start_date"
           value={form.start_date}
           onChange={handleChange}
-          className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+          className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         />
-        <span className="text-xs text-gray-500">The date the tournament begins.</span>
+        <span className="text-xs text-green-500">The date the tournament begins.</span>
       </div>
       <div>
-        <label className="block mb-1 font-medium">End Date</label>
+        <label className="block mb-1 font-medium text-green-400">End Date</label>
         <input
           type="date"
           name="end_date"
           value={form.end_date}
           onChange={handleChange}
-          className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+          className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         />
-        <span className="text-xs text-gray-500">The date the tournament ends.</span>
+        <span className="text-xs text-green-500">The date the tournament ends.</span>
       </div>
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
         disabled={loading}
       >
         {loading ? 'Adding...' : 'Add Tournament'}

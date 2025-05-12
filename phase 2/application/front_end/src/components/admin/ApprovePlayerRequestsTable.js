@@ -69,9 +69,9 @@ export default function ApprovePlayerRequestsTable() {
       ) : requests.length === 0 ? (
         <div className="text-center py-2">No pending requests.</div>
       ) : (
-        <table className="min-w-full border text-sm">
+        <table className="min-w-full border text-sm shadow rounded-lg overflow-hidden">
           <thead>
-            <tr className="bg-gray-100">
+            <tr className="bg-dark-700 text-green-400">
               <th className="border px-2 py-1">Player</th>
               <th className="border px-2 py-1">Team</th>
               <th className="border px-2 py-1">Tournament</th>
@@ -81,34 +81,34 @@ export default function ApprovePlayerRequestsTable() {
           </thead>
           <tbody>
             {requests.map(req => (
-              <tr key={req.request_id}>
+              <tr key={req.request_id} className="hover:bg-dark-800 transition">
                 <td className="border px-2 py-1">{req.player_name}</td>
                 <td className="border px-2 py-1">{req.team_name}</td>
                 <td className="border px-2 py-1">{req.tournament_name}</td>
                 <td className="border px-2 py-1">{req.request_date}</td>
-                <td className="border px-2 py-1">
+                <td className="border px-2 py-1 text-center">
                   {req.status === 'pending' && (
                     <>
                       <button
-                        className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition disabled:opacity-60"
+                        className="bg-green-800 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
                         onClick={() => handleApprove(req)}
                       >
                         Approve
                       </button>
                       <button
-                        className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition ml-2 disabled:opacity-60"
+                        className="bg-red-700 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-red-900 focus:ring-2 focus:ring-red-700 transition ml-2 disabled:opacity-60"
                         onClick={() => handleReject(req)}
                       >
                         Reject
                       </button>
-                      <span className="ml-2 bg-yellow-200 text-yellow-800 px-2 py-1 rounded font-semibold">Pending</span>
+                      <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-yellow-200 text-yellow-900">Pending</span>
                     </>
                   )}
                   {req.status === 'approved' && (
-                    <span className="bg-green-200 text-green-800 px-2 py-1 rounded font-semibold">Approved</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-200 text-green-900">Approved</span>
                   )}
                   {req.status === 'rejected' && (
-                    <span className="bg-red-200 text-red-800 px-2 py-1 rounded font-semibold">Rejected</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-200 text-red-900">Rejected</span>
                   )}
                 </td>
               </tr>

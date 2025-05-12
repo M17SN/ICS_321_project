@@ -41,12 +41,12 @@ export default function MatchAttendanceChart() {
           e.preventDefault();
           fetchAttendance();
         }}
-        className="flex flex-col sm:flex-row gap-2 mb-4 items-center"
+        className="flex flex-col sm:flex-row gap-2 mb-4 items-center bg-dark-800 p-4 rounded shadow text-white"
       >
         <select
           value={selectedTournament}
           onChange={e => setSelectedTournament(e.target.value)}
-          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-blue-300"
+          className="px-3 py-2 border rounded w-full sm:w-auto focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
           required
         >
           <option value="" disabled>Select Tournament</option>
@@ -56,7 +56,7 @@ export default function MatchAttendanceChart() {
         </select>
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
           disabled={loading || !selectedTournament}
         >
           {loading ? 'Loading...' : 'Show Attendance'}

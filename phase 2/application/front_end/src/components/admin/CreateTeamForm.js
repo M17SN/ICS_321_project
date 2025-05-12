@@ -22,7 +22,7 @@ export default function CreateTeamForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow">
+    <form onSubmit={handleSubmit} className="space-y-4 bg-dark-800 p-6 rounded shadow text-white">
       <h2 className="text-lg font-bold mb-2">Create a New Team</h2>
       <input
         type="text"
@@ -30,12 +30,12 @@ export default function CreateTeamForm() {
         placeholder="Team Name"
         value={teamName}
         onChange={e => setTeamName(e.target.value)}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       />
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 focus:ring-2 focus:ring-green-700 transition disabled:opacity-60"
         disabled={loading}
       >
         {loading ? 'Creating...' : 'Create Team'}

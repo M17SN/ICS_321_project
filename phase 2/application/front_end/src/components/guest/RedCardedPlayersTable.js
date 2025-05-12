@@ -32,7 +32,7 @@ export default function RedCardedPlayersTable() {
         <div className="overflow-x-auto">
           <table className="min-w-full border text-sm shadow rounded-lg overflow-hidden">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-dark-700 text-green-400">
                 <th className="border px-2 py-1">Team</th>
                 <th className="border px-2 py-1">Player</th>
                 <th className="border px-2 py-1">Position</th>
@@ -43,10 +43,10 @@ export default function RedCardedPlayersTable() {
             </thead>
             <tbody>
               {players.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-2">No red-carded players found.</td></tr>
+                <tr><td colSpan={6} className="text-center py-2 text-gray-400">No red-carded players found.</td></tr>
               ) : (
                 players.map((p, i) => (
-                  <tr key={i} className="hover:bg-blue-50 transition">
+                  <tr key={i} className="hover:bg-dark-800 transition">
                     <td className="border px-2 py-1">{p.team_name}</td>
                     <td className="border px-2 py-1">{p.name}</td>
                     <td className="border px-2 py-1">{p.position_to_play}</td>

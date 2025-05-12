@@ -29,22 +29,22 @@ export default function MyTeamDetails() {
   }, [user]);
 
   return (
-    <div className="bg-white p-6 rounded shadow space-y-4">
+    <div className="bg-dark-800 p-6 rounded shadow space-y-4">
       {loading ? (
-        <div>Loading...</div>
+        <div className="text-gray-300">Loading...</div>
       ) : error ? (
-        <div className="text-red-500">{error}</div>
+        <div className="text-red-400">{error}</div>
       ) : team && team.length > 0 ? (
         <div>
           <div className="font-bold mb-2 text-lg">Your Team(s):</div>
-          <ul className="list-disc ml-6 text-blue-800 font-medium space-y-1">
+          <ul className="list-disc ml-6 text-green-400 font-medium space-y-1">
             {team.map((t, i) => (
               <li key={i}>{t.team_name}</li>
             ))}
           </ul>
         </div>
       ) : (
-        <div>You are not registered with any team or tournament.</div>
+        <div className="text-gray-300">You are not registered with any team or tournament.</div>
       )}
     </div>
   );

@@ -10,6 +10,8 @@ export default function SelectCaptainForm() {
   const [players, setPlayers] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedTournamentId, setSelectedTournamentId] = useState('');
+  const [matches, setMatches] = useState([]);
+  const [selectedMatchNo, setSelectedMatchNo] = useState('');
 
   useEffect(() => {
     axios.get('http://localhost:4000/teams').then(res => setTeams(res.data)).catch(() => setTeams([]));
@@ -23,6 +25,16 @@ export default function SelectCaptainForm() {
         .catch(() => setPlayers([]));
     } else {
       setPlayers([]);
+    }
+  }, [selectedTeamId, selectedTournamentId]);
+
+  useEffect(() => {
+    if (selectedTeamId && selectedTournamentId) {
+      axios.get(`http://localhost:4000/admin/tournament/${selectedTournamentId}/unplayed-matches`)
+        .then(res => setMatches(res.data.filter(m => m.team_id1 == selectedTeamId || m.team_id2 == selectedTeamId)))
+        .catch(() => setMatches([]));
+    } else {
+      setMatches([]);
     }
   }, [selectedTeamId, selectedTournamentId]);
 
@@ -44,16 +56,22 @@ export default function SelectCaptainForm() {
     setForm({ ...form, player_name: e.target.value });
   };
 
+  const handleMatchChange = e => {
+    setSelectedMatchNo(e.target.value);
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post('http://localhost:4000/admin/select-captain', form);
+      await axios.post('http://localhost:4000/admin/select-captain', { ...form, match_no: selectedMatchNo });
       toast.success('Captain selected successfully!');
       setForm({ team_name: '', tournament_name: '', player_name: '' });
       setSelectedTeamId('');
       setSelectedTournamentId('');
       setPlayers([]);
+      setMatches([]);
+      setSelectedMatchNo('');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to select captain.');
     } finally {
@@ -67,7 +85,7 @@ export default function SelectCaptainForm() {
         name="team_name"
         value={selectedTeamId}
         onChange={handleTeamChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       >
         <option value="">Select Team</option>
@@ -79,7 +97,7 @@ export default function SelectCaptainForm() {
         name="tournament_name"
         value={selectedTournamentId}
         onChange={handleTournamentChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       >
         <option value="">Select Tournament</option>
@@ -91,7 +109,7 @@ export default function SelectCaptainForm() {
         name="player_name"
         value={form.player_name}
         onChange={handlePlayerChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
         disabled={!players.length}
       >
@@ -100,9 +118,24 @@ export default function SelectCaptainForm() {
           <option key={idx} value={player}>{player}</option>
         ))}
       </select>
+      <select
+        name="match_no"
+        value={selectedMatchNo}
+        onChange={handleMatchChange}
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
+        required
+        disabled={!matches.length}
+      >
+        <option value="">{matches.length ? 'Select Match' : 'No matches available'}</option>
+        {matches.map(m => (
+          <option key={m.match_no} value={m.match_no}>
+            #{m.match_no}: {m.play_stage} - {m.play_date?.split('T')[0]} (Teams: {m.team1_name} vs {m.team2_name})
+          </option>
+        ))}
+      </select>
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
         disabled={loading}
       >
         {loading ? 'Selecting...' : 'Select Captain'}

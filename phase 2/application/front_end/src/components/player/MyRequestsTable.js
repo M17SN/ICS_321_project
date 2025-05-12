@@ -38,7 +38,7 @@ export default function MyRequestsTable() {
         <div className="overflow-x-auto">
           <table className="min-w-full border text-sm shadow rounded-lg overflow-hidden">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-dark-700 text-green-400">
                 <th className="border px-2 py-1">Team</th>
                 <th className="border px-2 py-1">Tournament</th>
                 <th className="border px-2 py-1">Request Date</th>
@@ -47,26 +47,22 @@ export default function MyRequestsTable() {
             </thead>
             <tbody>
               {requests.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-2 text-gray-500">You have not made any join requests yet.</td></tr>
+                <tr><td colSpan={4} className="text-center py-2 text-gray-400">You have not made any join requests yet.</td></tr>
               ) : (
                 requests.map(req => (
-                  <tr key={req.request_id} className="hover:bg-blue-50 transition">
+                  <tr key={req.request_id} className="hover:bg-dark-800 transition">
                     <td className="border px-2 py-1">{req.team_name}</td>
                     <td className="border px-2 py-1">{req.tournament_name}</td>
                     <td className="border px-2 py-1">{req.request_date}</td>
-                    <td className="border px-2 py-1">
+                    <td className="border px-2 py-1 text-center">
                       <span
-                        className={
-                          req.status === 'pending'
-                            ? 'bg-yellow-200 text-yellow-800 px-2 py-1 rounded font-semibold'
-                            : req.status === 'approved'
-                            ? 'bg-green-200 text-green-800 px-2 py-1 rounded font-semibold'
-                            : req.status === 'rejected'
-                            ? 'bg-red-200 text-red-800 px-2 py-1 rounded font-semibold'
-                            : ''
-                        }
+                        className={`px-2 py-0.5 rounded text-xs font-semibold
+                          ${req.status === 'Pending' ? 'bg-yellow-200 text-yellow-900' : ''}
+                          ${req.status === 'Rejected' ? 'bg-red-200 text-red-900' : ''}
+                          ${req.status === 'Registered' ? 'bg-green-200 text-green-900' : ''}
+                        `}
                       >
-                        {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                        {req.status}
                       </span>
                     </td>
                   </tr>

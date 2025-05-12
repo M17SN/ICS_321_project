@@ -72,7 +72,7 @@ export default function JoinRequestForm() {
         name="team_name"
         value={teams.find(t => t.team_name === form.team_name)?.team_id || ''}
         onChange={handleTeamChange}
-        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+        className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
         required
       >
         <option value="">Select Team</option>
@@ -92,7 +92,7 @@ export default function JoinRequestForm() {
             name="tournament_name"
             value={tournaments.find(t => t.tr_name === form.tournament_name)?.tr_id || ''}
             onChange={handleTournamentChange}
-            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-300"
+            className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-700 bg-dark-700 text-white"
             required
           >
             <option value="">Select Tournament</option>
@@ -104,7 +104,7 @@ export default function JoinRequestForm() {
       )}
       <button
         type="submit"
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-60"
+        className="bg-green-800 text-white px-4 py-2 rounded hover:bg-green-900 transition disabled:opacity-60"
         disabled={loading || !form.team_name || !form.tournament_name || noTournaments}
       >
         {loading ? 'Sending...' : 'Send Join Request'}

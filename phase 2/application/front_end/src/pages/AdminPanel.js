@@ -12,42 +12,43 @@ import { MatchResultEntryForm } from '../components/admin';
 export default function AdminPanel() {
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-green-500">Admin Dashboard</h1>
       <div className="space-y-8">
-        <section className="bg-white p-6 rounded shadow">
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Create Team</h2>
           <CreateTeamForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Add a New Tournament</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Add Tournament</h2>
           <AddTournamentForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Add a Team to a Tournament</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Add Team to Tournament</h2>
           <AddTeamToTournamentForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Select Team Captain</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Select Captain</h2>
           <SelectCaptainForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Approve Player Join Requests</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Approve Player Requests</h2>
           <ApprovePlayerRequestsTable />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Schedule a Match</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Schedule Match</h2>
           <AdminScheduleMatchForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Enter Match Results & Details</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Match Result Entry</h2>
           <MatchResultEntryForm />
         </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Delete Tournament</h2>
-          <DeleteTournamentForm />
-        </section>
-        <section className="bg-white p-6 rounded shadow">
-          <h2 className="text-xl font-semibold mb-2">Attendance Over Time</h2>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Match Attendance Chart</h2>
           <MatchAttendanceChart />
+        </section>
+        <section className="bg-dark-800 p-6 rounded shadow">
+          <h2 className="text-xl font-semibold mb-2 text-green-400">Delete Tournament</h2>
+          <DeleteTournamentForm />
         </section>
       </div>
     </div>
